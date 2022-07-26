@@ -29,6 +29,7 @@ module SNSadmin::SNS{
 
     struct Domain has   store {
         stc_address : address,
+        contents    : vector<u8>,
         content     : Table::Table<u8, vector<u8>>
     }
 
@@ -39,6 +40,7 @@ module SNSadmin::SNS{
 
     struct SubDomain has store{
         stc_address : address,  
+        contents    : vector<u8>,
         content     : Table::Table<u8, vector<u8>>
     }
 
