@@ -63,4 +63,5 @@ module SNSadmin::SNS{
         DomainsName     :   vector<u8>,
         Domains         :   Table::Table<vector<u8>, NFT::NFT<SNSMetaData, SNSBody>>
     }
+
 }
