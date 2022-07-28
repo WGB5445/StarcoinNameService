@@ -46,17 +46,22 @@ module SNSadmin::SNS{
 
 
 
-
-
-
     struct Registry has key, store{
-        list : Table::Table<vector<u8>, RegistryDetails>
+        list : Table::Table<vector<u8>, ResolverDetails>
     }
 
     struct RegistryDetails has store, drop{
+        Expiration_time   : u64,
+        id                : u64
+    }
+
+    struct Resolvers has key, store{
+        list : Table::Table<vector<u8>, ResolverDetails>
+    }
+
+    struct ResolverDetails has store, drop{
         owner               : Option::Option<address>,
-        mainDomain          : Option::Option<vector<u8>>,
-        subDomainIndex      : u8
+        mainDomain          : Option::Option<vector<u8>>
     }
     
     struct DomainGallery has key, store{
