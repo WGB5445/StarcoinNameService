@@ -1,14 +1,16 @@
 module SNSadmin::DomainName{
     use StarcoinFramework::Vector;
+    use StarcoinFramework::Hash;
     use SNSadmin::UTF8;
 
+    const EMPTY_NODE:vector<u8> = x"0000000000000000000000000000000000000000000000000000000000000000";
 
-    public fun is_allow_format_domain_name(name:vector<u8>):bool {
-        if(! UTF8::is_utf8_str(copy name)){
+    public fun is_allow_format_domain_name(name:&vector<u8>):bool {
+        if(! UTF8::is_utf8_str(name)){
             return false
         };
 
-        let split = UTF8::get_dot_split(copy name);
+        let split = UTF8::get_dot_split(name);
         let len = Vector::length(&split);
         if(len > 3 || len < 2){
             return false
@@ -21,16 +23,28 @@ module SNSadmin::DomainName{
             };
             i = i + 1;
         };
-        let domain_length = UTF8::get_utf8_length( *Vector::borrow(&split, len - 2));
+        let domain_length = UTF8::get_utf8_length( Vector::borrow(&split, len - 2));
         if(domain_length > 20 || domain_length < 3){
             return false
         };
         true
     }
 
-    //TODO: get hash
-    public fun get_domain_name_hash(_name:vector<u8>):vector<u8>{
-        Vector::empty<u8>()
+    public fun dot_number(str:&vector<u8>):u64{
+        UTF8::dot_number(str)
+    }
+
+    public fun get_domain_name_hash(name:&vector<u8>):vector<u8>{
+        let node = EMPTY_NODE;
+        let vec = UTF8::get_dot_split(name);
+        let vec_length = Vector::length(&vec);
+        let i = 0;
+        while(i < vec_length){
+            Vector::append(&mut node ,Hash::keccak_256( *Vector::borrow(&vec, i) ));
+            node = Hash::keccak_256(node);
+            i = i + 1;
+        };
+        node
     }
 
     //TODO: prices
@@ -49,21 +63,21 @@ module SNSadmin::DomainName{
     #[test]
     fun test_is_allow_format_domain_name(){
         let name = b"1234.stc";
-        assert!(is_allow_format_domain_name(name) == true, 1001);
+        assert!(is_allow_format_domain_name(&name) == true, 1001);
         let name = b"1234.eth";
-        assert!(is_allow_format_domain_name(name) == false, 1002);
+        assert!(is_allow_format_domain_name(&name) == false, 1002);
         let name = b"1234.";
-        assert!(is_allow_format_domain_name(name) == false, 1003);        
+        assert!(is_allow_format_domain_name(&name) == false, 1003);        
         let name = b".stc";
-        assert!(is_allow_format_domain_name(name) == false, 1004);   
+        assert!(is_allow_format_domain_name(&name) == false, 1004);   
         let name = b"1234.4567.stc";
-        assert!(is_allow_format_domain_name(name) == true, 1005);
+        assert!(is_allow_format_domain_name(&name) == true, 1005);
         let name = b"123.4567.8901.stc";
-        assert!(is_allow_format_domain_name(name) == false, 1006);
+        assert!(is_allow_format_domain_name(&name) == false, 1006);
         let name = b"12.stc";
-        assert!(is_allow_format_domain_name(name) == false, 1007);
+        assert!(is_allow_format_domain_name(&name) == false, 1007);
         let name = b"123456789012345678901234567890123456789012345678901234567890.stc";
-        assert!(is_allow_format_domain_name(name) == false, 1008);        
+        assert!(is_allow_format_domain_name(&name) == false, 1008);        
     }
 
     #[test]
@@ -71,12 +85,8 @@ module SNSadmin::DomainName{
         use StarcoinFramework::Hash;
         use StarcoinFramework::Vector;
         
-        let node = Vector::empty<u8>();
-        let i = 0;
-        while(i < 32){
-            Vector::push_back(&mut node, 0);
-            i = i + 1;
-        };
+        let node = EMPTY_NODE;
+
         Vector::append(&mut node ,Hash::keccak_256(b"eth"));
         node = Hash::keccak_256(node);
         Vector::append(&mut node ,Hash::keccak_256(b"foo"));

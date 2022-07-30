@@ -30,6 +30,7 @@ module SNSadmin::Base64 {
     use StarcoinFramework::Vector;
 
     const TABLE:vector<u8> = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
     public fun encode(str: &vector<u8>): vector<u8> {
         if (Vector::is_empty(str)) {
             return Vector::empty<u8>()
@@ -41,35 +42,29 @@ module SNSadmin::Base64 {
         let m = 0 ;
         while (m < size ) {
             Vector::push_back(&mut res, *Vector::borrow(&TABLE ,(((*Vector::borrow(str, m) & 0xfc) >> 2 ) as u64 )) ); 
-
-            if( m + 1 < size){
-                
-                Vector::push_back(&mut res, *Vector::borrow(&TABLE, ((((*Vector::borrow(str, m) & 0x03) << 4) + ((*Vector::borrow(str, m + 1) & 0xf0 ) >> 4) ) as u64 )));
-                if( m + 2 < size){
-                    Vector::push_back(&mut res, *Vector::borrow(&TABLE, ((((*Vector::borrow(str, m + 1) & 0x0f) << 2 ) + ((*Vector::borrow(str, m + 2) & 0xc0 ) >> 6 )) as u64) ));
-                    Vector::push_back(&mut res, *Vector::borrow(&TABLE, ((*Vector::borrow(str, m + 2) & 0x3f) as u64))); 
-                }else{
+            if( m + 3 >= size){
+                if( size % 3 == 1){
+                    Vector::push_back(&mut res, *Vector::borrow(&TABLE ,(((*Vector::borrow(str, m) & 0x03) << 4 ) as u64 )) ); 
+                    Vector::push_back(&mut res, eq);
+                    Vector::push_back(&mut res, eq);
+                }else if(size % 3 == 2){
+                    Vector::push_back(&mut res, *Vector::borrow(&TABLE, ((((*Vector::borrow(str, m) & 0x03) << 4) + ((*Vector::borrow(str, m + 1) & 0xf0 ) >> 4) ) as u64 )));
                     Vector::push_back(&mut res, *Vector::borrow(&TABLE, (((*Vector::borrow(str, m + 1) & 0x0f ) << 2 ) as u64 ))); 
                     Vector::push_back(&mut res, eq);
+                }else{
+                    Vector::push_back(&mut res, *Vector::borrow(&TABLE, ((((*Vector::borrow(str, m) & 0x03) << 4) + ((*Vector::borrow(str, m + 1) & 0xf0 ) >> 4) ) as u64 )));
+                    Vector::push_back(&mut res, *Vector::borrow(&TABLE, ((((*Vector::borrow(str, m + 1) & 0x0f) << 2 ) + ((*Vector::borrow(str, m + 2) & 0xc0 ) >> 6 )) as u64) ));
+                    Vector::push_back(&mut res, *Vector::borrow(&TABLE, ((*Vector::borrow(str, m + 2) & 0x3f) as u64))); 
                 };
             }else{
-                Vector::push_back(&mut res, *Vector::borrow(&TABLE ,(((*Vector::borrow(str, m) & 0x03) << 4 ) as u64 )) ); 
-                Vector::push_back(&mut res, eq);
-                Vector::push_back(&mut res, eq);
+                Vector::push_back(&mut res, *Vector::borrow(&TABLE, ((((*Vector::borrow(str, m) & 0x03) << 4) + ((*Vector::borrow(str, m + 1) & 0xf0 ) >> 4) ) as u64 )));
+                Vector::push_back(&mut res, *Vector::borrow(&TABLE, ((((*Vector::borrow(str, m + 1) & 0x0f) << 2 ) + ((*Vector::borrow(str, m + 2) & 0xc0 ) >> 6 )) as u64) ));
+                Vector::push_back(&mut res, *Vector::borrow(&TABLE, ((*Vector::borrow(str, m + 2) & 0x3f) as u64))); 
             };
-
             m = m + 3;
         };
 
         return res
-    }
-    fun encode_triplet(a: u8, b: u8, c:u8):(u8, u8, u8, u8){
-        let concat_bits =   ((a as u64 ) << 16 ) |  ((b  as u64 ) << 8) | ( c as u64 );
-        let char1 = Vector::borrow(&TABLE, (concat_bits >> 18) & 63);
-        let char2 = Vector::borrow(&TABLE, (concat_bits >> 12) & 63);
-        let char3 = Vector::borrow(&TABLE, (concat_bits >> 6) & 63);
-        let char4 = Vector::borrow(&TABLE, concat_bits & 63);
-        (*char1, *char2, *char3, *char4)
     }
 
     public fun decode(code: &vector<u8>): vector<u8> {
@@ -117,12 +112,28 @@ module SNSadmin::Base64 {
     #[test]
     fun test_base64() {
         let str = b"abcdefghijklmnopqrstuvwsyzABCDEFGHIJKLMNOPQRSTUVWSYZ1234567890+/sdfa;fij;woeijfoawejif;oEQJJ'";
-        //StarcoinFramework::Debug::print(&str);
         let code = encode(&str);
-        //StarcoinFramework::Debug::print(&code);
         let decode_str = decode(&code);
-        //StarcoinFramework::Debug::print(&decode_str);
-        assert!(str == decode_str, 1000);
+        assert!(code == b"YWJjZGVmZ2hpamtsbW5vcHFyc3R1dndzeXpBQkNERUZHSElKS0xNTk9QUVJTVFVWV1NZWjEyMzQ1Njc4OTArL3NkZmE7ZmlqO3dvZWlqZm9hd2VqaWY7b0VRSkon",1001);
+        assert!(str == decode_str, 1002);
+
+        let str = b"123";
+        let code = encode(&str);
+        let decode_str = decode(&code);
+        assert!(code == b"MTIz" ,1003);
+        assert!(str == decode_str, 1004);
+
+        let str = b"10";
+        let code = encode(&str);
+        let decode_str = decode(&code);
+        assert!(code == b"MTA=" ,1005);
+        assert!(str == decode_str, 1006);
+
+        let str = b"1";
+        let code = encode(&str);
+        let decode_str = decode(&code);
+        assert!(code == b"MQ==" ,1007);
+        assert!(str == decode_str, 1008);
     }
 
     #[test]

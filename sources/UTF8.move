@@ -22,15 +22,15 @@ module SNSadmin::UTF8{
         }
     }
 
-    public fun is_utf8_str(str: vector<u8>):bool{
-        let len = Vector::length(&str);
+    public fun is_utf8_str(str: &vector<u8>):bool{
+        let len = Vector::length(str);
         if (len == 0){
             return false
         };
         let i = 0;
         let char_len = 0;
         while(i < len){
-            let char = *Vector::borrow(&str, i);
+            let char = *Vector::borrow(str, i);
             if(char_len == 0){
                 char_len = get_char_utf8_length(char);
                 if(char_len == 0){
@@ -47,13 +47,13 @@ module SNSadmin::UTF8{
         true
     }
 
-    public fun get_utf8_length (str: vector<u8>):u64{
-        assert!( is_utf8_str(copy str), Errors::not_published(ERROR_IS_NOT_UTF8));
-        let len = Vector::length(&str);
+    public fun get_utf8_length (str: &vector<u8>):u64{
+        assert!( is_utf8_str(str), Errors::not_published(ERROR_IS_NOT_UTF8));
+        let len = Vector::length(str);
         let offset = 0;
         let str_length = 0; 
         while(offset < len){
-            let char = *Vector::borrow(&str, offset);
+            let char = *Vector::borrow(str, offset);
             let char_len = get_char_utf8_length(char);
             str_length = str_length + 1;
             offset = offset + char_len;
@@ -61,14 +61,14 @@ module SNSadmin::UTF8{
         str_length
     }
 
-    public fun get_dot_split(str:vector<u8>):vector<vector<u8>>{
-        assert!( is_utf8_str(copy str), Errors::not_published(ERROR_IS_NOT_UTF8));
+    public fun get_dot_split(str: &vector<u8>):vector<vector<u8>>{
+        assert!( is_utf8_str(str), Errors::not_published(ERROR_IS_NOT_UTF8));
         let vec = Vector::empty<vector<u8>>();
         let dot_index = Vector::empty<u64>();
-        let len = Vector::length(&str);
+        let len = Vector::length(str);
         let offset = 0;
         while(offset < len){
-            let char = *Vector::borrow(&str, offset);
+            let char = *Vector::borrow(str, offset);
             let char_len = get_char_utf8_length(char);
             if(char_len == 1 && char == 0x2E){
                 Vector::push_back(&mut dot_index, offset); 
@@ -89,7 +89,7 @@ module SNSadmin::UTF8{
             }else{
                 let split = Vector::empty<u8>();
                 while(offset < index){
-                    Vector::push_back(&mut split, *Vector::borrow(&str, offset));
+                    Vector::push_back(&mut split, *Vector::borrow(str, offset));
                     offset = offset + 1;
                 };
                 Vector::push_back(&mut vec, split);
@@ -103,7 +103,7 @@ module SNSadmin::UTF8{
         }else{
             let split = Vector::empty<u8>();
             while(offset < len){
-                Vector::push_back(&mut split, *Vector::borrow(&str, offset));
+                Vector::push_back(&mut split, *Vector::borrow(str, offset));
                 offset = offset + 1;
             };
             Vector::push_back(&mut vec, split);
@@ -112,41 +112,58 @@ module SNSadmin::UTF8{
         vec
     }
 
+    public fun dot_number(str:&vector<u8>):u64{
+        assert!( is_utf8_str(str), Errors::not_published(ERROR_IS_NOT_UTF8));
+        let len = Vector::length(str);
+        let offset = 0;
+        let dot_length = 0;
+        while(offset < len){
+            let char = *Vector::borrow(str, offset);
+            let char_len = get_char_utf8_length(char);
+            if(char_len == 1 && char == 0x2E){
+                dot_length = dot_length + 1;
+            };
+            offset = offset + char_len;
+        };
+        dot_length
+    }
+
+
     #[test]
     fun test_is_utf8_str(){
         let str = b"123456789";
-        assert!(is_utf8_str(copy str) == true , 1001);
+        assert!(is_utf8_str(&str) == true , 1001);
         let str = x"e4bda0e5a5bd";
-        assert!(is_utf8_str(copy str) == true , 1002);
+        assert!(is_utf8_str(&str) == true , 1002);
     }
 
     #[test]
     fun test_get_utf8_str_length(){
         let str = b"123456789";
-        assert!(get_utf8_length(copy str) == 9 , 1101);
+        assert!(get_utf8_length(&str) == 9 , 1101);
 
         let str = x"e4bda0e5a5bd";
-        assert!(get_utf8_length(copy str) == 2 , 1102);
+        assert!(get_utf8_length(&str) == 2 , 1102);
     }
 
     #[test]
     fun test_get_dot_split(){
         let str = b"123.456.789";
-        let vec = get_dot_split(str);
+        let vec = get_dot_split(&str);
         assert!(Vector::length(&vec) == 3, 1201);
         assert!(b"123" == *Vector::borrow(&vec, 0), 1202);
         assert!(b"456" == *Vector::borrow(&vec, 1), 1203);
         assert!(b"789" == *Vector::borrow(&vec, 2), 1204);
 
         let str = b".456.789";
-        let vec = get_dot_split(str);
+        let vec = get_dot_split(&str);
         assert!(Vector::length(&vec) == 3, 1205);
         assert!(b"" == *Vector::borrow(&vec, 0), 1206);
         assert!(b"456" == *Vector::borrow(&vec, 1), 1207);
         assert!(b"789" == *Vector::borrow(&vec, 2), 1208);
 
         let str = b"123.456.";
-        let vec = get_dot_split(str);
+        let vec = get_dot_split(&str);
         assert!(Vector::length(&vec) == 3, 1209);
         assert!(b"123" == *Vector::borrow(&vec, 0), 1210);
         assert!(b"456" == *Vector::borrow(&vec, 1), 1211);
@@ -154,7 +171,7 @@ module SNSadmin::UTF8{
 
 
         let str = b"123.";
-        let vec = get_dot_split(str);
+        let vec = get_dot_split(&str);
         assert!(Vector::length(&vec) == 2, 1213);
         assert!(b"123" == *Vector::borrow(&vec, 0), 1214);
         assert!(b"" == *Vector::borrow(&vec, 1), 1215);
