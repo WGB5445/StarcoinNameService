@@ -15,7 +15,7 @@ module SNSadmin::SNS1{
 
     const SVG_Base64_Header :vector<u8> = b"data:image/svg+xml;base64,";
 
-    const SVG_Header:vector<u8> = b"<svg xmlns='http://www.w3.org/2000/svg' version='1.1' width='600' height='600'><defs><linearGradient id='grad1' x1='0%' y1='0%' x2='0%' y2='100%'><stop offset='0%' style='stop-color:rgb(3, 150, 248);stop-opacity:1' /><stop offset='100%' style='stop-color:rgb(4, 71, 178);stop-opacity:1' /></linearGradient></defs><rect x='0' y='0' rx='15' ry='15' width='600' height='600' fill='url(#grad1)'/><foreignObject width='600' height='600' x='20' y='20'><body xmlns='http://www.w3.org/1999/xhtml'><text x='20' y='20' style='font-size: 15pt;fill: rgb(255, 255, 255);'>";
+    const SVG_Header:vector<u8> = b"<svg xmlns='http://www.w3.org/2000/svg' version='1.1' width='600' height='600'><defs><linearGradient id='grad1' x1='0%' y1='0%' x2='0%' y2='100%'><stop offset='0%' style='stop-color:rgb(3, 150, 248);stop-opacity:1' /><stop offset='100%' style='stop-color:rgb(4, 71, 178);stop-opacity:1' /></linearGradient></defs><rect x='0' y='0' rx='15' ry='15' width='600' height='600' fill='url(#grad1)'/><foreignObject width='600' height='600' x='20' y='20'><body xmlns='http://www.w3.org/1999/xhtml'><text x='20' y='20' style='font-size: 18pt;fill: rgb(255, 255, 255);'>";
     const SVG_Last:vector<u8> = b"</text></body></foreignObject></svg>";
 
     struct ShardCap has key, store{
@@ -250,9 +250,9 @@ module SNSadmin::SNS1{
         _ = Table::remove(resolvers, copy name_hash);
     }
 
-    public fun resolve(node:vector<u8>):address acquires Resolvers{
+    public fun resolve_stc_address(node:vector<u8>):address acquires Resolvers, ShardCap {
         let resolvers = &borrow_global<Resolvers>(@SNSadmin).list;
-        // let shardCap = borrow_global_mut<ShardCap>(@SNSadmin);
+        let shardCap = borrow_global_mut<ShardCap>(@SNSadmin);
         
         if(Table::contains(resolvers, copy node)){
             let resolverDetails = Table::borrow(resolvers, copy node);
@@ -268,11 +268,13 @@ module SNSadmin::SNS1{
                 };
             }else{
                 let owner = *Option::borrow(&resolverDetails.owner);
-                // let nft = Identifier::IdentifierNFT::revoke<SNSMetaData,SNSBody>(&mut shardCap.burn_cap, owner);
-                // let body = NFT::borrow_body(&nft);
-                // let stc_address = body.domain.stc_address;
-                // IdentifierNFT::grant(&mut shardCap.mint_cap, sender, nft);
-                return owner
+                let box_nft =  IdentifierNFT::borrow_out<SNSMetaData,SNSBody>(&mut shardCap.updata_cap, owner);
+                let nft = IdentifierNFT::borrow_nft(&mut box_nft);
+                
+                let body = NFT::borrow_body(nft);
+                let stc_address = body.domain.stc_address;
+                IdentifierNFT::return_back(box_nft);
+                return stc_address
             };
 
         };
@@ -308,10 +310,10 @@ module SNSadmin::SNStestscript{
     }
 
     public fun resolve_4_name(name:vector<u8>):address{
-        SNS1::resolve(DomainName::get_domain_name_hash(&name))
+        SNS1::resolve_stc_address(DomainName::get_domain_name_hash(&name))
     }
 
     public fun resolve_4_node(node:vector<u8>):address{
-        SNS1::resolve(node)
+        SNS1::resolve_stc_address(node)
     }
 }

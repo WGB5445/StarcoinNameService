@@ -7,4 +7,4 @@ StarcoinFramework = "0x1"
 SNSadmin = "0x851abef4ed79813d11bda0ca307ba021"
 
 [dependencies]
-StarcoinFramework = {git = "https://github.com/starcoinorg/starcoin-framework.git", rev="525e7a0f06803c521af47957b4598797c754a8df"}
+StarcoinFramework = {git = "https://github.com/starcoinorg/starcoin-framework.git", rev="dd3e58c8ac5f5b94d2365bc3f089fe83b69ab091"}
