@@ -38,15 +38,22 @@ module SNSadmin::DomainName{
         let node = EMPTY_NODE;
         let vec = UTF8::get_dot_split(name);
         let vec_length = Vector::length(&vec);
-        let i = 0;
-        while(i < vec_length){
+        let i = vec_length - 1;
+        while(i > 0){
             Vector::append(&mut node ,Hash::keccak_256( *Vector::borrow(&vec, i) ));
             node = Hash::keccak_256(node);
-            i = i + 1;
+            i = i - 1;
         };
         node
     }
 
+    public fun  get_name_hash_2(root: &vector<u8>, name:&vector<u8>):vector<u8>{
+        let node = EMPTY_NODE;
+        Vector::append(&mut node ,Hash::keccak_256(*root));
+        node = Hash::keccak_256(node);
+        Vector::append(&mut node ,Hash::keccak_256(*name));
+        Hash::keccak_256(node)
+    }
     //TODO: prices
     public fun price (_name:vector<u8>):u128{
         1000

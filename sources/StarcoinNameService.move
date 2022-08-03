@@ -1,4 +1,4 @@
-module SNSadmin::SNS1{
+module SNSadmin::SNS4{
     use StarcoinFramework::Table;
     use StarcoinFramework::Vector;
     use StarcoinFramework::Signer;
@@ -9,7 +9,7 @@ module SNSadmin::SNS1{
     use StarcoinFramework::NFTGallery;
     // use StarcoinFramework::Account;
     // use StarcoinFramework::Math;
-    use StarcoinFramework::Hash;
+    // use StarcoinFramework::Hash;
     use SNSadmin::DomainName;
     use SNSadmin::Base64;
 
@@ -26,16 +26,18 @@ module SNSadmin::SNS1{
 
     struct SNSMetaData has drop, copy, store {
         domain_name         :   vector<u8>,
-        node                :   vector<u8>,
+        parent                :   vector<u8>,
         create_time         :   u64,
         expiration_time     :   u64,
     }
 
     struct SNSBody has store{
-        domain      :   Domain,
-        subDomains  :   SubDomains
+
     }
 
+
+
+    
 
     struct Domain has   store {
         stc_address : address,
@@ -56,8 +58,13 @@ module SNSadmin::SNS1{
 
 
 
-    struct Registry has key, store{
-        list : Table::Table<vector<u8>, RegistryDetails>
+    struct RootList has key,store{
+        roots : Table::Table<vector<u8>, Root>
+    }
+    
+    struct Root has key,store{
+        registry :Table::Table<vector<u8>, RegistryDetails>,
+        resolvers :Table::Table<vector<u8>, ResolverDetails>
     }
 
     struct RegistryDetails has store, drop{
@@ -65,19 +72,29 @@ module SNSadmin::SNS1{
         id                : u64
     }
 
-    struct Resolvers has key, store{
-        list : Table::Table<vector<u8>, ResolverDetails>
-    }
 
     struct ResolverDetails has store, drop{
-        owner               : Option::Option<address>,
-        mainDomain          : Option::Option<vector<u8>>
+        mainDomain          : Option::Option<vector<u8>>,
+        stc_address         : address,
+        // addressRecord       : AddressRecord,
+        // contentRecord       : ContentRecord,
+        // textRecord          : TextRecord
     }
     
     // struct DomainGallery has key, store{
     //     DomainsName     :   vector<u8>,
     //     Domains         :   Table::Table<vector<u8>, NFT::NFT<SNSMetaData, SNSBody>>
     // }
+
+    public fun  add_root(sender:&signer, root:&vector<u8>)acquires RootList{
+        let account = Signer::address_of(sender);
+        assert!(account == @SNSadmin,10012);
+        let roots = &mut borrow_global_mut<RootList>(@SNSadmin).roots;
+        Table::add(roots, *root, Root{
+            registry :Table::new<vector<u8>, RegistryDetails>(),
+            resolvers :Table::new<vector<u8>, ResolverDetails>()
+        });
+    }
 
     public  fun init(sender:&signer){
         let account = Signer::address_of(sender);
@@ -90,24 +107,24 @@ module SNSadmin::SNS1{
             updata_cap  :   NFT::remove_update_capability<SNSMetaData>(sender)
         });
         
-        
-        move_to(sender,Resolvers{
-            list : Table::new<vector<u8>, ResolverDetails>()
-        });
-        move_to(sender,Registry{
-            list : Table::new<vector<u8>, RegistryDetails>()
-        });
+        let rootlist = RootList{
+            roots : Table::new<vector<u8>, Root>()
+        };
+
+        move_to(sender, rootlist);
     }
 
-    public fun register (sender:&signer, name: &vector<u8>, registration_duration: u64) acquires Registry, Resolvers, ShardCap{
+    public fun register (sender:&signer, name: &vector<u8>, root_name:&vector<u8>, registration_duration: u64) acquires RootList, ShardCap{
         assert!( registration_duration >= 60 * 60 * 24 * 180 ,1001);
-        assert!( DomainName::is_allow_format_domain_name(name) , 1002);
-        assert!( DomainName::dot_number(name) == 1 , 1003);
+
+        assert!( DomainName::dot_number(name) == 0 , 1003);
         let account = Signer::address_of(sender);
+
         let now_time = Timestamp::now_seconds();
-        let name_hash = DomainName::get_domain_name_hash(name);
-        let registry = &mut borrow_global_mut<Registry>(@SNSadmin).list;
-        let resolvers = &mut borrow_global_mut<Resolvers>(@SNSadmin).list;
+        let name_hash = DomainName::get_name_hash_2(root_name, name);
+        let roots = &mut borrow_global_mut<RootList>(@SNSadmin).roots;
+        let root = Table::borrow_mut(roots, *root_name);
+        
         let shardCap = borrow_global_mut<ShardCap>(@SNSadmin);
 
         let svg = SVG_Header;
@@ -115,30 +132,25 @@ module SNSadmin::SNS1{
         Vector::append(&mut svg, SVG_Last);
         let svg_base64 = SVG_Base64_Header;
         Vector::append(&mut svg_base64, Base64::encode(&svg));
-        let nft = NFT::mint_with_cap_v2<SNSMetaData,SNSBody>(account, &mut shardCap.mint_cap, NFT::new_meta_with_image(*name,svg_base64,b"Starcoin Name Service"),
+        let domain_name = *name;
+        Vector::append(&mut domain_name, b".");
+        Vector::append(&mut domain_name, *root_name);
+        let nft = NFT::mint_with_cap_v2<SNSMetaData,SNSBody>(account, &mut shardCap.mint_cap, NFT::new_meta_with_image(domain_name,svg_base64,b"Starcoin Name Service"),
             SNSMetaData{
                 domain_name         :   *name,
-                node                :   copy name_hash,
+                parent              :   *root_name,
                 create_time         :   now_time,
                 expiration_time     :   now_time + registration_duration,
             },
             SNSBody{
-                domain      :   Domain{
-                    stc_address : account,
-                    contents    : Vector::empty(),
-                    content     : Table::new<u8, vector<u8>>()
-                },
-                subDomains  :   SubDomains{
-                    subDomainsName     :   Vector::empty(),
-                    subDomains         :   Table::new<vector<u8>, SubDomain>()
-                }
+
             }
         );
 
         //TODO pay some STC
 
-        if(Table::contains(registry, copy name_hash)){
-            let registryDetails = Table::borrow_mut(registry, copy name_hash);
+        if(Table::contains(&root.registry, copy name_hash)){
+            let registryDetails = Table::borrow_mut(&mut root.registry, copy name_hash);
             if( registryDetails.expiration_time < now_time){
                 registryDetails.expiration_time = now_time + registration_duration;
                 registryDetails.id = NFT::get_id(&nft);
@@ -146,31 +158,23 @@ module SNSadmin::SNS1{
                 abort 10001
             };
         }else{
-            Table::add(registry, copy name_hash, RegistryDetails{
+            Table::add(&mut root.registry, copy name_hash, RegistryDetails{
                 expiration_time   : now_time + registration_duration,
                 id                : NFT::get_id(&nft)
             });
         };
 
-        if(Table::contains(resolvers, copy name_hash)){
-            let resolverDetails = Table::borrow_mut(resolvers, copy name_hash);
-            let owner = *Option::borrow(&resolverDetails.owner);
-            let old_nft = IdentifierNFT::revoke<SNSMetaData,SNSBody>(&mut shardCap.burn_cap, owner);
-            NFTGallery::deposit_to(owner, old_nft);
-            _ = Table::remove(resolvers, copy name_hash);
+        if(Table::contains(&root.resolvers, copy name_hash)){
+            _ = Table::remove(&mut root.resolvers, copy name_hash);
         }else{
             
         };
         NFTGallery::deposit(sender, nft);
     }
 
-    public fun use_with_config (sender:&signer, id: u64, stc_address: address, contents:&vector<u8>, content:&vector<vector<u8>>) acquires ShardCap,Resolvers,Registry{
-        let content_length = Vector::length(content);
-        let contents_length = Vector::length(contents);
-        
-        assert!(content_length == contents_length, 1002);
+    public fun use_domain (sender:&signer, id: u64, stc_address: address) acquires ShardCap,RootList{
+        let roots = &mut borrow_global_mut<RootList>(@SNSadmin).roots;
 
-        
         let shardCap = borrow_global_mut<ShardCap>(@SNSadmin);
 
         let nft_op = NFTGallery::withdraw<SNSMetaData,SNSBody>(sender, id);
@@ -180,140 +184,127 @@ module SNSadmin::SNS1{
         let nft = Option::destroy_some(nft_op);
 
         let nft_meta = NFT::get_type_meta(&nft);
-        let name_hash = *&nft_meta.node;
-        let now_time = Timestamp::now_seconds();
-
-        let registry = &borrow_global<Registry>(@SNSadmin).list;
-        let registryDetails = Table::borrow(registry, copy name_hash);
-        if( registryDetails.expiration_time < now_time){
-            abort 100132
+        let root;
+        if(Table::contains(roots, *&nft_meta.parent)){
+            root = Table::borrow_mut(roots, *&nft_meta.parent);
+        }else{
+            abort 10000
         };
-
-        let body = NFT::borrow_body_mut_with_cap(&mut shardCap.updata_cap, &mut nft);
-
-        body.domain.stc_address = stc_address;
         
-        let i = 0;
-        while(i < content_length){
-            Table::add(&mut body.domain.content, *Vector::borrow(contents,i), *Vector::borrow(content,i));
-            Vector::push_back(&mut body.domain.contents, *Vector::borrow(contents,i));
-        };
+        let name_hash = DomainName::get_name_hash_2(&nft_meta.parent, &nft_meta.domain_name);
 
+        let now_time = Timestamp::now_seconds();
+        if(Table::contains(&root.registry, copy name_hash)){
+            let registryDetails = Table::borrow_mut(&mut root.registry, copy name_hash);
+            if( registryDetails.expiration_time < now_time){
+                abort 10001
+            }
+        }else{
+            abort 10002
+        };
+        
         IdentifierNFT::grant(&mut shardCap.mint_cap, sender, nft);
 
-        let resolvers = &mut borrow_global_mut<Resolvers>(@SNSadmin).list;
-        
-        Table::add(resolvers,  name_hash, ResolverDetails{
-            owner         : Option::some(stc_address),
-            mainDomain    : Option::none<vector<u8>>()
+        Table::add(&mut root.resolvers,  name_hash, ResolverDetails{
+            mainDomain    : Option::none<vector<u8>>(),
+            stc_address   : stc_address,
         });
     }
     
-    public fun unuse(sender:&signer)acquires ShardCap,Resolvers{
-        let resolvers = &mut borrow_global_mut<Resolvers>(@SNSadmin).list;
+    public fun unuse(sender:&signer)acquires ShardCap,RootList{
+        let roots = &mut borrow_global_mut<RootList>(@SNSadmin).roots;
         
         let account = Signer::address_of(sender);
         let shardCap = borrow_global_mut<ShardCap>(@SNSadmin);
         let nft = IdentifierNFT::revoke<SNSMetaData,SNSBody>(&mut shardCap.burn_cap, account);
 
-        let name_hash = *&NFT::get_type_meta(&nft).node;
-
-        let body = NFT::borrow_body_mut_with_cap(&mut shardCap.updata_cap, &mut nft);
-
-        let content_length = Vector::length(&body.domain.contents);
-
-        let i = 0;
-        while(i < content_length){
-            _ = Table::remove(&mut body.domain.content, Vector::pop_back(&mut body.domain.contents));
-            i = i + 1;
-        };
-        
-        let subDomain_length = Vector::length(&body.subDomains.subDomainsName);
-        let i = 0;
-        while(i < subDomain_length){
-            let SubDomain{
-                stc_address : _,  
-                contents    : contents,
-                content     : content
-            } = Table::remove(&mut body.subDomains.subDomains, Hash::keccak_256(Vector::pop_back(&mut body.subDomains.subDomainsName)));
-            let j = 0;
-            let subDomain_content_length = Vector::length(&contents);
-            while(j < subDomain_content_length){
-                _ = Table::remove(&mut content,Vector::pop_back(&mut contents));
-                j = j + 1;
-            };
-            Table::destroy_empty(content);
-            i = i + 1;
-        };
+        let nft_meta = NFT::get_type_meta(&nft);
+        let root = Table::borrow_mut(roots, *&nft_meta.parent);
+        let name_hash = DomainName::get_name_hash_2(&nft_meta.parent, &nft_meta.domain_name);
 
         NFTGallery::deposit_to(account, nft);
-        _ = Table::remove(resolvers, copy name_hash);
+        _ = Table::remove(&mut root.resolvers, copy name_hash);
     }
 
-    public fun resolve_stc_address(node:vector<u8>):address acquires Resolvers, ShardCap {
-        let resolvers = &borrow_global<Resolvers>(@SNSadmin).list;
-        let shardCap = borrow_global_mut<ShardCap>(@SNSadmin);
-        
-        if(Table::contains(resolvers, copy node)){
-            let resolverDetails = Table::borrow(resolvers, copy node);
+    public fun resolve_stc_address(node:&vector<u8>, root_name:&vector<u8>):address acquires RootList {
+    
+        let roots = &mut borrow_global_mut<RootList>(@SNSadmin).roots;
+        let root = Table::borrow_mut(roots, *root_name);
+        if(Table::contains(&root.resolvers, *node)){
+            let resolverDetails = Table::borrow(&root.resolvers, *node);
 
-            if(Option::is_none(&resolverDetails.owner)){
-                if(Option::is_none(&resolverDetails.mainDomain)){
-                    
-                }else{
-                    let mainDomain_node = *Option::borrow(&resolverDetails.mainDomain);
-                    let r = Table::borrow(resolvers, mainDomain_node);
-                    let owner = *Option::borrow(&r.owner);
-                    return owner
-                };
+            if(Option::is_none(&resolverDetails.mainDomain)){
+                return resolverDetails.stc_address
             }else{
-                let owner = *Option::borrow(&resolverDetails.owner);
-                let box_nft =  IdentifierNFT::borrow_out<SNSMetaData,SNSBody>(&mut shardCap.updata_cap, owner);
-                let nft = IdentifierNFT::borrow_nft(&mut box_nft);
-                
-                let body = NFT::borrow_body(nft);
-                let stc_address = body.domain.stc_address;
-                IdentifierNFT::return_back(box_nft);
-                return stc_address
-            };
-
+                let mainDomain_node = *Option::borrow(&resolverDetails.mainDomain);
+                return Table::borrow(&root.resolvers, mainDomain_node).stc_address
+            }
         };
         abort 1012
     }
 
+    public fun burn(sender:&signer,id: u64)acquires ShardCap,RootList{
+        let roots = &mut borrow_global_mut<RootList>(@SNSadmin).roots;
+
+        let shardCap = borrow_global_mut<ShardCap>(@SNSadmin);
+
+        let nft_op = NFTGallery::withdraw<SNSMetaData,SNSBody>(sender, id);
+
+        assert!(Option::is_some(&nft_op),1003);
+
+        let nft = Option::destroy_some(nft_op);
+
+        let nft_meta = NFT::get_type_meta(&nft);
+ 
+        let root = Table::borrow_mut(roots, *&nft_meta.parent);
+        let name_hash = DomainName::get_name_hash_2(&nft_meta.parent, &nft_meta.domain_name);
+
+        let now_time = Timestamp::now_seconds();
+        let registryDetails = Table::borrow(&root.registry, copy name_hash);
+        if( registryDetails.expiration_time < now_time){
+           
+        };
+        
+        SNSBody{} = NFT::burn_with_cap(&mut shardCap.burn_cap, nft);
+        _ = Table::remove(&mut root.resolvers, copy name_hash);
+    }
 }
 
-module SNSadmin::SNStestscript{
-    use SNSadmin::SNS1;
+module SNSadmin::SNStestscript4{
+    use SNSadmin::SNS4;
     use SNSadmin::DomainName;
     use StarcoinFramework::Signer;
-    use StarcoinFramework::Vector;
+
 
     public (script) fun init(sender:signer){
-        SNS1::init(&sender);
+        SNS4::init(&sender);
     }
 
-    public (script) fun register(sender:signer, name: vector<u8>, registration_duration: u64){
-        SNS1::register(&sender, &name, registration_duration);
+    public (script) fun register(sender:signer, name: vector<u8>, root: vector<u8>,registration_duration: u64){
+        SNS4::register(&sender, &name, &root, registration_duration);
     }
 
-    public (script) fun use_with_config (sender:signer, id: u64, stc_address: address, contents:vector<u8>, content:vector<vector<u8>>){
-        SNS1::use_with_config(&sender,id,stc_address,&contents,&content);
+    public (script) fun use_with_config (sender:signer, id: u64, stc_address: address){
+        SNS4::use_domain(&sender,id,stc_address);
     }
 
     public (script) fun use_default (sender:signer, id: u64){
-        SNS1::use_with_config(&sender,id,Signer::address_of(&sender),&Vector::empty<u8>(),&Vector::empty<vector<u8>>());
+        SNS4::use_domain(&sender,id,Signer::address_of(&sender));
     }
 
     public (script) fun unuse(sender:signer){
-        SNS1::unuse(&sender);
+        SNS4::unuse(&sender);
     }
 
+    public (script) fun add_root(sender:signer, root:vector<u8>){
+        SNS4::add_root(&sender, &root);
+    }
     public fun resolve_4_name(name:vector<u8>):address{
-        SNS1::resolve_stc_address(DomainName::get_domain_name_hash(&name))
+        SNS4::resolve_stc_address(&DomainName::get_name_hash_2(&b"stc",&name), &b"stc")
     }
 
     public fun resolve_4_node(node:vector<u8>):address{
-        SNS1::resolve_stc_address(node)
+        SNS4::resolve_stc_address(&node,&b"stc")
     }
+
 }
