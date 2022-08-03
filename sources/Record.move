@@ -154,9 +154,49 @@ module SNSadmin::Record{
         }
     }
 
-    // public fun remove_all_allow_address_record()acquires AddressRecordAllow{
+    public fun remove_all_allow_address_record_len(name:&vector<u8>)acquires AddressRecordAllow{
+        let allow = borrow_global_mut<AddressRecordAllow>(@SNSadmin);
+        let list = &mut allow.list;
 
-    // }
+        if(Table::contains(list, *name)){
+            let AddressRecordAllowBox{
+                list,
+                all
+            } = Table::remove(list, *name);
+            let length = Vector::length(&all);
+            let i = 0;
+            while(i < length){
+                Table::remove(&mut list, *Vector::borrow(&all, i));
+                i = i + 1;
+            };
+            Table::destroy_empty(list);
+        }
+    }
+
+    public fun remove_all_allow_address_record()acquires AddressRecordAllow{
+        let allow = borrow_global_mut<AddressRecordAllow>(@SNSadmin);
+        let allow_list = &mut allow.list;
+
+        let j = 0;
+        let len = Vector::length(&allow.all);
+        while(j < len){
+            let name = Vector::borrow(&allow.all, j);
+            if(Table::contains(allow_list, *name)){
+                let AddressRecordAllowBox{
+                    list,
+                    all
+                } = Table::remove(allow_list, *name);
+                let length = Vector::length(&all);
+                let i = 0;
+                while(i < length){
+                    Table::remove(&mut list, *Vector::borrow(&all, i));
+                    i = i + 1;
+                };
+                Table::destroy_empty(list);
+            };
+            j = j + 1;
+        };
+    }
 
     public fun new_content_record():ContentRecord {
         ContentRecord{
@@ -212,6 +252,39 @@ module SNSadmin::Record{
             false
         }
     }
+
+    public fun add_allow_content_record(name:&vector<u8>,len:u64)acquires ContentRecordAllow{
+        let allow = borrow_global_mut<ContentRecordAllow>(@SNSadmin);
+        let list = &mut allow.list;
+
+        if(Table::contains(list, *name)){
+            *Table::borrow_mut(list, *name) = len
+        }else{
+            Table::add(list, *name, len)
+        }
+    }
+
+    public fun remove_allow_content_record(name:&vector<u8>)acquires ContentRecordAllow{
+        let allow = borrow_global_mut<ContentRecordAllow>(@SNSadmin);
+        let list = &mut allow.list;
+
+        if(Table::contains(list, *name)){
+            Table::remove(list, *name);
+        };
+    }
+
+    public fun remove_all_content_address_record()acquires ContentRecordAllow{
+        let allow = borrow_global_mut<ContentRecordAllow>(@SNSadmin);
+        let list = &mut allow.list;
+
+        let length = Vector::length(&allow.all);
+        let i = 0;
+        while(i < length){
+            Table::remove(list, *Vector::borrow(&allow.all, i));
+            i = i + 1;
+        }; 
+    }
+
 
 
 }
