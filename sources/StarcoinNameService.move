@@ -12,6 +12,7 @@ module SNSadmin::SNS4{
     // use StarcoinFramework::Hash;
     use SNSadmin::DomainName;
     use SNSadmin::Base64;
+    use SNSadmin::Record;
 
     const SVG_Base64_Header :vector<u8> = b"data:image/svg+xml;base64,";
 
@@ -35,29 +36,6 @@ module SNSadmin::SNS4{
 
     }
 
-
-
-    
-
-    struct Domain has   store {
-        stc_address : address,
-        contents    : vector<u8>,
-        content     : Table::Table<u8, vector<u8>>
-    }
-
-    struct SubDomains has store{
-        subDomainsName     :   vector<vector<u8>>,
-        subDomains         :   Table::Table<vector<u8>, SubDomain>
-    }
-
-    struct SubDomain has store{
-        stc_address : address,  
-        contents    : vector<u8>,
-        content     : Table::Table<u8, vector<u8>>
-    }
-
-
-
     struct RootList has key,store{
         roots : Table::Table<vector<u8>, Root>
     }
@@ -73,10 +51,10 @@ module SNSadmin::SNS4{
     }
 
 
-    struct ResolverDetails has store, drop{
+    struct ResolverDetails has store{
         mainDomain          : Option::Option<vector<u8>>,
         stc_address         : address,
-        // addressRecord       : AddressRecord,
+        addressRecord       : Record::AddressRecord,
         // contentRecord       : ContentRecord,
         // textRecord          : TextRecord
     }
@@ -165,7 +143,12 @@ module SNSadmin::SNS4{
         };
 
         if(Table::contains(&root.resolvers, copy name_hash)){
-            _ = Table::remove(&mut root.resolvers, copy name_hash);
+            let ResolverDetails{
+                mainDomain: _mainDomain         ,
+                stc_address:_stc_address        ,
+                addressRecord      
+            } = Table::remove(&mut root.resolvers, copy name_hash);
+            Record::destroy_address_record(addressRecord);
         }else{
             
         };
@@ -208,6 +191,7 @@ module SNSadmin::SNS4{
         Table::add(&mut root.resolvers,  name_hash, ResolverDetails{
             mainDomain    : Option::none<vector<u8>>(),
             stc_address   : stc_address,
+            addressRecord:Record::new_address_record()
         });
     }
     
@@ -223,7 +207,12 @@ module SNSadmin::SNS4{
         let name_hash = DomainName::get_name_hash_2(&nft_meta.parent, &nft_meta.domain_name);
 
         NFTGallery::deposit_to(account, nft);
-        _ = Table::remove(&mut root.resolvers, copy name_hash);
+        let ResolverDetails{
+                mainDomain:_mainDomain         ,
+                stc_address:_stc_address        ,
+                addressRecord      
+            } = Table::remove(&mut root.resolvers, copy name_hash);
+        Record::destroy_address_record(addressRecord);
     }
 
     public fun resolve_stc_address(node:&vector<u8>, root_name:&vector<u8>):address acquires RootList {
@@ -266,7 +255,12 @@ module SNSadmin::SNS4{
         };
         
         SNSBody{} = NFT::burn_with_cap(&mut shardCap.burn_cap, nft);
-        _ = Table::remove(&mut root.resolvers, copy name_hash);
+        let ResolverDetails{
+                mainDomain:_mainDomain         ,
+                stc_address:_stc_address        ,
+                addressRecord      
+            } = Table::remove(&mut root.resolvers, copy name_hash);
+        Record::destroy_address_record(addressRecord);
     }
 }
 
