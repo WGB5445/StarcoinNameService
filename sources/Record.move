@@ -1,6 +1,7 @@
-module SNSadmin::Record{
+module SNSadmin::Record1{
     use StarcoinFramework::Table;
     use StarcoinFramework::Vector;
+    use StarcoinFramework::Option;
     use StarcoinFramework::Signer;
 
     struct AddressRecord has key,store{
@@ -103,6 +104,14 @@ module SNSadmin::Record{
         }
     }
 
+    public fun get_address_record(obj:&AddressRecord, name:&vector<u8>):Option::Option<vector<u8>>{
+        if(Table::contains(&obj.addresses, *name)){
+            Option::some(*Table::borrow(&obj.addresses,*name))
+        }else{
+            Option::none<vector<u8>>()
+        }
+    }
+
     public fun is_allow_address_record(name:&vector<u8>, addr:&vector<u8>):bool acquires AddressRecordAllow{
         let list = &borrow_global<AddressRecordAllow>(@SNSadmin).list;
 
@@ -114,7 +123,9 @@ module SNSadmin::Record{
         }
     }
 
-    public fun add_allow_address_record(name:&vector<u8>,len:u64)acquires AddressRecordAllow{
+    public fun add_allow_address_record(sender:&signer,name:&vector<u8>,len:u64)acquires AddressRecordAllow{
+        let account = Signer::address_of(sender);
+        assert!(account == @SNSadmin,10012);
         let allow = borrow_global_mut<AddressRecordAllow>(@SNSadmin);
         let list = &mut allow.list;
 
@@ -140,7 +151,9 @@ module SNSadmin::Record{
         }
     }
 
-    public fun remove_allow_address_record(name:&vector<u8>,len:u64)acquires AddressRecordAllow{
+    public fun remove_allow_address_record(sender:&signer,name:&vector<u8>,len:u64)acquires AddressRecordAllow{
+        let account = Signer::address_of(sender);
+        assert!(account == @SNSadmin,10012);
         let allow = borrow_global_mut<AddressRecordAllow>(@SNSadmin);
         let list = &mut allow.list;
 
@@ -154,7 +167,10 @@ module SNSadmin::Record{
         }
     }
 
-    public fun remove_all_allow_address_record_len(name:&vector<u8>)acquires AddressRecordAllow{
+    public fun remove_all_allow_address_record_len(sender:&signer,name:&vector<u8>)acquires AddressRecordAllow{
+        
+        let account = Signer::address_of(sender);
+        assert!(account == @SNSadmin,10012);
         let allow = borrow_global_mut<AddressRecordAllow>(@SNSadmin);
         let list = &mut allow.list;
 
@@ -173,7 +189,9 @@ module SNSadmin::Record{
         }
     }
 
-    public fun remove_all_allow_address_record()acquires AddressRecordAllow{
+    public fun remove_all_allow_address_record(sender:&signer)acquires AddressRecordAllow{
+        let account = Signer::address_of(sender);
+        assert!(account == @SNSadmin,10012);
         let allow = borrow_global_mut<AddressRecordAllow>(@SNSadmin);
         let allow_list = &mut allow.list;
 
@@ -253,7 +271,9 @@ module SNSadmin::Record{
         }
     }
 
-    public fun add_allow_content_record(name:&vector<u8>,len:u64)acquires ContentRecordAllow{
+    public fun add_allow_content_record(sender:&signer,name:&vector<u8>,len:u64)acquires ContentRecordAllow{
+        let account = Signer::address_of(sender);
+        assert!(account == @SNSadmin,10012);
         let allow = borrow_global_mut<ContentRecordAllow>(@SNSadmin);
         let list = &mut allow.list;
 
@@ -264,7 +284,9 @@ module SNSadmin::Record{
         }
     }
 
-    public fun remove_allow_content_record(name:&vector<u8>)acquires ContentRecordAllow{
+    public fun remove_allow_content_record(sender:&signer,name:&vector<u8>)acquires ContentRecordAllow{
+        let account = Signer::address_of(sender);
+        assert!(account == @SNSadmin,10012);
         let allow = borrow_global_mut<ContentRecordAllow>(@SNSadmin);
         let list = &mut allow.list;
 
@@ -273,7 +295,9 @@ module SNSadmin::Record{
         };
     }
 
-    public fun remove_all_content_address_record()acquires ContentRecordAllow{
+    public fun remove_all_content_address_record(sender:&signer)acquires ContentRecordAllow{
+        let account = Signer::address_of(sender);
+        assert!(account == @SNSadmin,10012);
         let allow = borrow_global_mut<ContentRecordAllow>(@SNSadmin);
         let list = &mut allow.list;
 
