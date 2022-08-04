@@ -4,7 +4,7 @@ module SNSadmin::SNS6{
     use StarcoinFramework::Signer;
     use StarcoinFramework::Timestamp;
     use StarcoinFramework::NFT;
-    use StarcoinFramework::Option;
+    use StarcoinFramework::Option::{Self,Option};
     use StarcoinFramework::IdentifierNFT;
     use StarcoinFramework::NFTGallery;
     // use StarcoinFramework::Account;
@@ -65,7 +65,7 @@ module SNSadmin::SNS6{
     //     Domains         :   Table::Table<vector<u8>, NFT::NFT<SNSMetaData, SNSBody>>
     // }
 
-    public fun  add_root(sender:&signer, root:&vector<u8>)acquires RootList{
+    public fun add_root(sender:&signer, root:&vector<u8>)acquires RootList{
         let account = Signer::address_of(sender);
         assert!(account == @SNSadmin,10012);
         let roots = &mut borrow_global_mut<RootList>(@SNSadmin).roots;
@@ -75,7 +75,7 @@ module SNSadmin::SNS6{
         });
     }
 
-    public  fun init(sender:&signer){
+    public fun init(sender:&signer){
         let account = Signer::address_of(sender);
         assert!(account == @SNSadmin,10012);
         NFT::register_v2<SNSMetaData>(sender, NFT::empty_meta());
@@ -197,7 +197,7 @@ module SNSadmin::SNS6{
         });
     }
     
-    public fun  add_Record_address(sender:&signer,name:&vector<u8>,addr:&vector<u8>)acquires RootList{
+    public fun add_Record_address(sender:&signer,name:&vector<u8>,addr:&vector<u8>)acquires RootList{
         let account = Signer::address_of(sender);
         let op_info = IdentifierNFT::get_nft_info<SNSMetaData,SNSBody>(account);
         assert!(Option::is_some(&op_info),102123);
@@ -212,6 +212,48 @@ module SNSadmin::SNS6{
         if(Table::contains(&root.registry, copy name_hash)){
             let registryDetails = Table::borrow_mut(&mut root.registry, copy name_hash);
             if( registryDetails.id != id ){
+                abort 10001
+            }
+        }else{
+            abort 10002
+        };
+
+        if(Table::contains(&root.resolvers, copy name_hash)){
+            let addressRecord = &mut Table::borrow_mut(&mut root.resolvers, copy name_hash).addressRecord;
+            Record::change_address_record( addressRecord,name,addr)
+        }else{
+            abort 100012
+        };
+
+
+    }
+
+    public fun change_Record_address(sender:&signer,id:Option<u64>,name:&vector<u8>,addr:&vector<u8>)acquires RootList{
+        let account = Signer::address_of(sender);
+        let (nft_id,nft_meta) = if( Option::is_none(&id)){
+            let op_info = IdentifierNFT::get_nft_info<SNSMetaData,SNSBody>(account);
+            assert!(Option::is_some(&op_info),102123);
+            let info = Option::destroy_some(op_info);
+            let (nft_id,_,_,nft_meta) = NFT::unpack_info(info);
+            (nft_id, nft_meta)
+        }else{
+            let nft_id = *Option::borrow(&id);
+            let op_info = NFTGallery::get_nft_info_by_id<SNSMetaData,SNSBody>(account, nft_id);
+            assert!(Option::is_some(&op_info),102123);
+            let info = Option::destroy_some(op_info);
+            let (nft_id,_,_,nft_meta) = NFT::unpack_info(info);
+            (nft_id, nft_meta)
+        };
+
+        let name_hash = DomainName::get_name_hash_2(&nft_meta.parent, &nft_meta.domain_name);
+        
+        let roots = &mut borrow_global_mut<RootList>(@SNSadmin).roots;
+        assert!(Table::contains(roots, *&nft_meta.parent),10000);
+        let root = Table::borrow_mut(roots, *&nft_meta.parent);
+
+        if(Table::contains(&root.registry, copy name_hash)){
+            let registryDetails = Table::borrow_mut(&mut root.registry, copy name_hash);
+            if( registryDetails.id != nft_id ){
                 abort 10001
             }
         }else{
@@ -320,6 +362,7 @@ module SNSadmin::SNStestscript6{
     use SNSadmin::SNS6 as SNS;
     use SNSadmin::DomainName;
     use StarcoinFramework::Signer;
+    use StarcoinFramework::Option;
 
 
     public (script) fun register(sender:signer, name: vector<u8>, root: vector<u8>,registration_duration: u64){
@@ -339,8 +382,13 @@ module SNSadmin::SNStestscript6{
     }
 
     public (script)fun add_Record_address(sender:signer,name:vector<u8>,addr:vector<u8>){
-        SNS::add_Record_address(&sender,&name,&addr);
+        SNS::change_Record_address(&sender,Option::none<u64>(),&name,&addr);
     }
+
+    public (script)fun change_NFTGallery_Record_address(sender:signer,id:u64,name:vector<u8>,addr:vector<u8>){
+        SNS::change_Record_address(&sender,Option::some(id),&name,&addr);
+    }
+    
 
     public fun resolve_4_name(name:vector<u8>):address{
         SNS::resolve_stc_address(&DomainName::get_name_hash_2(&b"stc",&name), &b"stc")
