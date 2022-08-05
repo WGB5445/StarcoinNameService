@@ -146,18 +146,29 @@ module SNSadmin::SNS6{
 
         if(Table::contains(&root.resolvers, copy name_hash)){
             let ResolverDetails{
-                mainDomain: _mainDomain         ,
-                stc_address:_stc_address        ,
+                mainDomain: _         ,
+                stc_address:_        ,
                 addressRecord      
             } = Table::remove(&mut root.resolvers, copy name_hash);
             Record::destroy_address_record(addressRecord);
+
+            Table::add(&mut root.resolvers,  name_hash, ResolverDetails{
+                mainDomain    : Option::none<vector<u8>>(),
+                stc_address   : account,
+                addressRecord :Record::new_address_record()
+            });
         }else{
-            
+            Table::add(&mut root.resolvers,  name_hash, ResolverDetails{
+                mainDomain    : Option::none<vector<u8>>(),
+                stc_address   : account,
+                addressRecord :Record::new_address_record()
+            });
         };
         NFTGallery::deposit(sender, nft);
     }
 
-    public fun use_domain (sender:&signer, id: u64, stc_address: address) acquires ShardCap,RootList{
+    //TODO : remove stc_address
+    public fun use_domain (sender:&signer, id: u64, _stc_address: address) acquires ShardCap,RootList{
         let roots = &mut borrow_global_mut<RootList>(@SNSadmin).roots;
 
         let shardCap = borrow_global_mut<ShardCap>(@SNSadmin);
@@ -189,14 +200,50 @@ module SNSadmin::SNS6{
         };
         
         IdentifierNFT::grant(&mut shardCap.mint_cap, sender, nft);
-
-        Table::add(&mut root.resolvers,  name_hash, ResolverDetails{
-            mainDomain    : Option::none<vector<u8>>(),
-            stc_address   : stc_address,
-            addressRecord:Record::new_address_record()
-        });
     }
     
+    public fun change_stc_address(sender:&signer,id:Option<u64>,addr:address)acquires RootList{
+        let account = Signer::address_of(sender);
+        let (nft_id,nft_meta) = if( Option::is_none(&id)){
+            let op_info = IdentifierNFT::get_nft_info<SNSMetaData,SNSBody>(account);
+            assert!(Option::is_some(&op_info),102123);
+            let info = Option::destroy_some(op_info);
+            let (nft_id,_,_,nft_meta) = NFT::unpack_info(info);
+            (nft_id, nft_meta)
+        }else{
+            let nft_id = *Option::borrow(&id);
+            let op_info = NFTGallery::get_nft_info_by_id<SNSMetaData,SNSBody>(account, nft_id);
+            assert!(Option::is_some(&op_info),102123);
+            let info = Option::destroy_some(op_info);
+            let (nft_id,_,_,nft_meta) = NFT::unpack_info(info);
+            (nft_id, nft_meta)
+        };
+
+        let name_hash = DomainName::get_name_hash_2(&nft_meta.parent, &nft_meta.domain_name);
+        
+        let roots = &mut borrow_global_mut<RootList>(@SNSadmin).roots;
+        assert!(Table::contains(roots, *&nft_meta.parent),10000);
+        let root = Table::borrow_mut(roots, *&nft_meta.parent);
+
+        if(Table::contains(&root.registry, copy name_hash)){
+            let registryDetails = Table::borrow_mut(&mut root.registry, copy name_hash);
+            if( registryDetails.id != nft_id ){
+                abort 10001
+            }
+        }else{
+            abort 10002
+        };
+
+        if(Table::contains(&root.resolvers, copy name_hash)){
+            *&mut Table::borrow_mut(&mut root.resolvers, copy name_hash).stc_address = addr;
+        }else{
+            abort 100012
+        };
+
+
+    }
+
+
     public fun add_Record_address(sender:&signer,name:&vector<u8>,addr:&vector<u8>)acquires RootList{
         let account = Signer::address_of(sender);
         let op_info = IdentifierNFT::get_nft_info<SNSMetaData,SNSBody>(account);
@@ -270,24 +317,26 @@ module SNSadmin::SNS6{
 
     }
 
-    public fun unuse(sender:&signer)acquires ShardCap,RootList{
-        let roots = &mut borrow_global_mut<RootList>(@SNSadmin).roots;
+
+
+    public fun unuse(sender:&signer)acquires ShardCap{
+        // let roots = &mut borrow_global_mut<RootList>(@SNSadmin).roots;
         
         let account = Signer::address_of(sender);
         let shardCap = borrow_global_mut<ShardCap>(@SNSadmin);
         let nft = IdentifierNFT::revoke<SNSMetaData,SNSBody>(&mut shardCap.burn_cap, account);
 
-        let nft_meta = NFT::get_type_meta(&nft);
-        let root = Table::borrow_mut(roots, *&nft_meta.parent);
-        let name_hash = DomainName::get_name_hash_2(&nft_meta.parent, &nft_meta.domain_name);
+        // let nft_meta = NFT::get_type_meta(&nft);
+        // let root = Table::borrow_mut(roots, *&nft_meta.parent);
+        // let name_hash = DomainName::get_name_hash_2(&nft_meta.parent, &nft_meta.domain_name);
 
         NFTGallery::deposit_to(account, nft);
-        let ResolverDetails{
-                mainDomain:_mainDomain         ,
-                stc_address:_stc_address        ,
-                addressRecord      
-            } = Table::remove(&mut root.resolvers, copy name_hash);
-        Record::destroy_address_record(addressRecord);
+        // let ResolverDetails{
+        //         mainDomain:_mainDomain         ,
+        //         stc_address:_stc_address        ,
+        //         addressRecord      
+        //     } = Table::remove(&mut root.resolvers, copy name_hash);
+        // Record::destroy_address_record(addressRecord);
     }
 
     public fun resolve_stc_address(node:&vector<u8>, root_name:&vector<u8>):address acquires RootList {
@@ -345,16 +394,22 @@ module SNSadmin::SNS6{
         let name_hash = DomainName::get_name_hash_2(&nft_meta.parent, &nft_meta.domain_name);
         let registryDetails = Table::borrow(&root.registry, copy name_hash);
         if( registryDetails.id == id){
-           abort 2341
-        };
-        
-        SNSBody{} = NFT::burn_with_cap(&mut shardCap.burn_cap, nft);
-        let ResolverDetails{
+        //    abort 2341
+            let ResolverDetails{
                 mainDomain:_mainDomain         ,
                 stc_address:_stc_address        ,
                 addressRecord      
             } = Table::remove(&mut root.resolvers, copy name_hash);
-        Record::destroy_address_record(addressRecord);
+            Record::destroy_address_record(addressRecord);
+        };
+        
+        SNSBody{} = NFT::burn_with_cap(&mut shardCap.burn_cap, nft);
+        // let ResolverDetails{
+        //         mainDomain:_mainDomain         ,
+        //         stc_address:_stc_address        ,
+        //         addressRecord      
+        //     } = Table::remove(&mut root.resolvers, copy name_hash);
+        // Record::destroy_address_record(addressRecord);
     }
 }
 
@@ -379,6 +434,14 @@ module SNSadmin::SNStestscript6{
 
     public (script) fun unuse(sender:signer){
         SNS::unuse(&sender);
+    }
+
+    public (script)fun change_stc_address(sender:signer,addr:address){
+        SNS::change_stc_address(&sender,Option::none<u64>(),addr);
+    }
+
+    public (script)fun change_NFTGallery_stc_address(sender:signer,id:u64,addr:address){
+        SNS::change_stc_address(&sender,Option::some(id),addr);
     }
 
     public (script)fun add_Record_address(sender:signer,name:vector<u8>,addr:vector<u8>){
