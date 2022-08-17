@@ -1,4 +1,5 @@
-module SNSadmin::SNS6{
+/*
+module SNSadmin::starcoin_name_service{
     use StarcoinFramework::Table;
     use StarcoinFramework::Vector;
     use StarcoinFramework::Signer;
@@ -12,86 +13,18 @@ module SNSadmin::SNS6{
     // use StarcoinFramework::Hash;
     use SNSadmin::DomainName;
     use SNSadmin::Base64;
-    use SNSadmin::Record1 as Record;
-
-    const SVG_Base64_Header :vector<u8> = b"data:image/svg+xml;base64,";
-
-    const SVG_Header:vector<u8> = b"<svg xmlns='http://www.w3.org/2000/svg' version='1.1' width='600' height='600'><defs><linearGradient id='grad1' x1='0%' y1='0%' x2='0%' y2='100%'><stop offset='0%' style='stop-color:rgb(3, 150, 248);stop-opacity:1' /><stop offset='100%' style='stop-color:rgb(4, 71, 178);stop-opacity:1' /></linearGradient></defs><rect x='0' y='0' rx='15' ry='15' width='600' height='600' fill='url(#grad1)'/><foreignObject width='600' height='600' x='20' y='20'><body xmlns='http://www.w3.org/1999/xhtml'><text x='20' y='20' style='font-size: 18pt;fill: rgb(255, 255, 255);'>";
-    const SVG_Last:vector<u8> = b"</text></body></foreignObject></svg>";
-
-    struct ShardCap has key, store{
-        mint_cap    :   NFT::MintCapability<SNSMetaData>,
-        burn_cap    :   NFT::BurnCapability<SNSMetaData>,
-        updata_cap  :   NFT::UpdateCapability<SNSMetaData>
-    }
-
-    struct SNSMetaData has drop, copy, store {
-        domain_name         :   vector<u8>,
-        parent                :   vector<u8>,
-        create_time         :   u64,
-        expiration_time     :   u64,
-        // subdomain_names     : vector<vector<u8>>
-    }
-
-    struct SNSBody has store{
-
-    }
-
-    struct RootList has key,store{
-        roots : Table::Table<vector<u8>, Root>
-    }
+    // use SNSadmin::Record1 as Record;
     
-    struct Root has key,store{
-        registry :Table::Table<vector<u8>, RegistryDetails>,
-        resolvers :Table::Table<vector<u8>, ResolverDetails>
-    }
 
-    struct RegistryDetails has store, drop{
-        expiration_time   : u64,
-        id                : u64
-    }
-
-
-    struct ResolverDetails has store{
-        mainDomain          : Option::Option<vector<u8>>,
-        stc_address         : address,
-        addressRecord       : Record::AddressRecord,
-        // contentRecord       : ContentRecord,
-        // textRecord          : TextRecord
-    }
-    
-    // struct DomainGallery has key, store{
-    //     DomainsName     :   vector<u8>,
-    //     Domains         :   Table::Table<vector<u8>, NFT::NFT<SNSMetaData, SNSBody>>
+    // public fun add_root(sender:&signer, root:&vector<u8>)acquires RootList{
+    //     let account = Signer::address_of(sender);
+    //     assert!(account == @SNSadmin,10012);
+    //     let roots = &mut borrow_global_mut<RootList>(@SNSadmin).roots;
+    //     Table::add(roots, *root, Root{
+    //         registry :Table::new<vector<u8>, RegistryDetails>(),
+    //         resolvers :Table::new<vector<u8>, ResolverDetails>()
+    //     });
     // }
-
-    public fun add_root(sender:&signer, root:&vector<u8>)acquires RootList{
-        let account = Signer::address_of(sender);
-        assert!(account == @SNSadmin,10012);
-        let roots = &mut borrow_global_mut<RootList>(@SNSadmin).roots;
-        Table::add(roots, *root, Root{
-            registry :Table::new<vector<u8>, RegistryDetails>(),
-            resolvers :Table::new<vector<u8>, ResolverDetails>()
-        });
-    }
-
-    public fun init(sender:&signer){
-        let account = Signer::address_of(sender);
-        assert!(account == @SNSadmin,10012);
-        NFT::register_v2<SNSMetaData>(sender, NFT::empty_meta());
-        
-        move_to(sender,ShardCap{
-            mint_cap    :   NFT::remove_mint_capability<SNSMetaData>(sender),
-            burn_cap    :   NFT::remove_burn_capability<SNSMetaData>(sender),
-            updata_cap  :   NFT::remove_update_capability<SNSMetaData>(sender)
-        });
-        
-        let rootlist = RootList{
-            roots : Table::new<vector<u8>, Root>()
-        };
-
-        move_to(sender, rootlist);
-    }
 
     public fun register (sender:&signer, name: &vector<u8>, root_name:&vector<u8>, registration_duration: u64) acquires RootList, ShardCap{
         assert!( registration_duration >= 60 * 60 * 24 * 180 ,1001);
@@ -114,18 +47,7 @@ module SNSadmin::SNS6{
         let domain_name = *name;
         Vector::append(&mut domain_name, b".");
         Vector::append(&mut domain_name, *root_name);
-        let nft = NFT::mint_with_cap_v2<SNSMetaData,SNSBody>(account, &mut shardCap.mint_cap, NFT::new_meta_with_image(domain_name,svg_base64,b"Starcoin Name Service"),
-            SNSMetaData{
-                domain_name         :   *name,
-                parent              :   *root_name,
-                create_time         :   now_time,
-                expiration_time     :   now_time + registration_duration,
-                //subdomain_names     :   Vector::empty<vector<u8>>()
-            },
-            SNSBody{
-
-            }
-        );
+        
 
         //TODO pay some STC
 
@@ -497,3 +419,4 @@ module SNSadmin::SNSInittestscript6{
         Record::init(&sender);
     }
 }
+*/
