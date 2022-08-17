@@ -5,7 +5,7 @@ module SNSadmin::name_service_nft{
     use SNSadmin::Base64;
 
 
-    friend SNSadmin::registrar;
+    friend SNSadmin::starcoin_name_service;
 
 
     const SVG_Base64_Header :vector<u8> = b"data:image/svg+xml;base64,";
@@ -80,4 +80,16 @@ module SNSadmin::name_service_nft{
         info
     }
 
+    public fun get_domain_name<ROOT: store>(obj:&SNSMetaData<ROOT>):vector<u8>{
+        *&obj.domain_name
+    }
+    public fun get_parent<ROOT: store>(obj:&SNSMetaData<ROOT>):vector<u8>{
+        *&obj.parent
+    }
+    public fun get_create_time<ROOT: store>(obj:&SNSMetaData<ROOT>):u64{
+        obj.create_time
+    }
+    public fun get_expiration_time<ROOT: store>(obj:&SNSMetaData<ROOT>):u64{
+        obj.expiration_time
+    }
 }

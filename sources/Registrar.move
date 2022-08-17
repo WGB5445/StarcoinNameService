@@ -2,12 +2,15 @@ module SNSadmin::registrar{
 
     use StarcoinFramework::Table;
     use StarcoinFramework::Signer;
+    use StarcoinFramework::Option;
     
+    friend SNSadmin::starcoin_name_service;
+
     struct Registry<phantom ROOT> has key,store{
         list :  Table::Table<vector<u8>, RegistryDetails>
     }
 
-    struct RegistryDetails has store, drop{
+    struct RegistryDetails has store, copy, drop{
         expiration_time   : u64,
         id                : u64
     }
@@ -48,14 +51,22 @@ module SNSadmin::registrar{
     }
 
     // Read 
-    public fun get_details_by_hash<ROOT: store>(hash:&vector<u8>):(u64,u64) acquires Registry{
+    public fun get_details_by_hash<ROOT: store>(hash:&vector<u8>):Option::Option<RegistryDetails> acquires Registry{
         let registry = & borrow_global<Registry<ROOT>>(@SNSadmin).list;
         if(Table::contains(registry, *hash)){
             let registryDetails = Table::borrow(registry, *hash);
-            ( registryDetails.expiration_time, registryDetails.id )
+            Option::some(*registryDetails)
         }else{
-            abort 120001
+            Option::none<RegistryDetails>()
         }
+    }
+
+    public fun get_expiration_time(obj:&RegistryDetails):u64{
+        obj.expiration_time
+    }
+
+    public fun get_id(obj:&RegistryDetails):u64{
+        obj.id
     }
 
 }
