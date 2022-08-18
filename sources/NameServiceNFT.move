@@ -33,13 +33,20 @@ module SNSadmin::NameServiceNFT{
     public fun init<ROOT: store>(sender:&signer){
         let account = Signer::address_of(sender);
         assert!(account == @SNSadmin,10012);
-        NFT::register_v2<SNSMetaData<ROOT>>(sender, NFT::empty_meta());
+        NFT::register_v2<SNSMetaData<ROOT>>(sender, NFT::new_meta(b"Starcoin Name Service",b"Starcoin Name Service - Test Net"));
         
         move_to(sender,ShardCap{
             mint_cap    :   NFT::remove_mint_capability<SNSMetaData<ROOT>>(sender),
             burn_cap    :   NFT::remove_burn_capability<SNSMetaData<ROOT>>(sender),
             updata_cap  :   NFT::remove_update_capability<SNSMetaData<ROOT>>(sender)
         });
+    }
+
+    public fun update_nft_type_info_meta<ROOT: store>(sender:&signer) acquires ShardCap{
+        let account = Signer::address_of(sender);
+        assert!(account == @SNSadmin,10012);
+        let shardCap = borrow_global_mut<ShardCap<ROOT>>(@SNSadmin);
+        NFT::update_nft_type_info_meta_with_cap<SNSMetaData<ROOT>>(&mut shardCap.updata_cap, NFT::new_meta(b"Starcoin Name Service",b"Starcoin Name Service - Test Net"));
     }
 
     public (friend) fun mint<ROOT: store>(creater: address, domain_name:&vector<u8>, parent: &vector<u8>, create_time: u64, expiration_time: u64):NFT::NFT<SNSMetaData<ROOT>,SNSBody> acquires ShardCap{
@@ -57,7 +64,7 @@ module SNSadmin::NameServiceNFT{
 
         let shardCap = borrow_global_mut<ShardCap<ROOT>>(@SNSadmin);
 
-        NFT::mint_with_cap_v2<SNSMetaData<ROOT>,SNSBody>(creater, &mut shardCap.mint_cap, NFT::new_meta_with_image(name,svg_base64,b"Starcoin Name Service"),
+        NFT::mint_with_cap_v2<SNSMetaData<ROOT>,SNSBody>(creater, &mut shardCap.mint_cap, NFT::new_meta_with_image_data(name,svg_base64,b"Starcoin Name Service"),
             SNSMetaData{
                 domain_name         :   *domain_name,
                 parent              :   *parent,

@@ -86,7 +86,8 @@ module SNSadmin::StarcoinNameService{
         };
         
         NameServiceNFT::grant(sender, nft);
-        
+
+        Resolver::change<ROOT>(&name_hash, Signer::address_of(sender));
     }
 
     public (friend) fun unuse_domain<ROOT: store> (sender:&signer) {
@@ -100,11 +101,12 @@ module SNSadmin::StarcoinNameService{
     public fun change_stc_address<ROOT: store>(sender:&signer, id:Option<u64>, addr:address){
         let account = Signer::address_of(sender);
         let (nft_id,nft_meta) = if( Option::is_none(&id)){
-            let op_info = IdentifierNFT::get_nft_info<SNSMetaData<ROOT>,SNSBody>(account);
-            assert!(Option::is_some(&op_info),102123);
-            let info = Option::destroy_some(op_info);
-            let (nft_id,_,_,nft_meta) = NFT::unpack_info(info);
-            (nft_id, nft_meta)
+            // let op_info = IdentifierNFT::get_nft_info<SNSMetaData<ROOT>,SNSBody>(account);
+            // assert!(Option::is_some(&op_info),102123);
+            // let info = Option::destroy_some(op_info);
+            // let (nft_id,_,_,nft_meta) = NFT::unpack_info(info);
+            // (nft_id, nft_meta)
+            abort 20303
         }else{
             let nft_id = *Option::borrow(&id);
             let op_info = NFTGallery::get_nft_info_by_id<SNSMetaData<ROOT>,SNSBody>(account, nft_id);
@@ -361,6 +363,9 @@ module SNSadmin::StarcoinNameServiceScript{
     //     SNS::change_Record_address(&sender,Option::some(id),&name,&addr);
     // }
     
+    public fun resolve_domain_name<ROOT: store>(addr:address):vector<u8>{
+        SNS::resolve_domain_name<ROOT>(addr)
+    }
 
     public fun resolve_4_name<ROOT: store>(name:vector<u8>):address{
         SNS::resolve_stc_address<ROOT>(&DomainName::get_domain_name_hash(&name))
@@ -383,27 +388,31 @@ module SNSadmin::StarcoinNameServiceScript{
 module SNSadmin::StarcoinNameServiceInitScript{
     use SNSadmin::Resolver as Resolver;
     use SNSadmin::Registrar as Registrar;
-    use SNSadmin::AddressResolver as AddressResolver;
+    // use SNSadmin::AddressResolver as AddressResolver;
     use SNSadmin::NameServiceNFT as NameServiceNFT;
 
     public (script) fun Registrar_init<T: store>(sender:signer){
         Registrar::init<T>(&sender);
     }
-    public (script)fun NameServiceNFT_init<T: store>(sender:signer){
+    public (script) fun NameServiceNFT_init<T: store>(sender:signer){
         NameServiceNFT::init<T>(&sender);
     }
+
+    public (script) fun update_nft_type_info_meta<T: store>(sender:signer){
+        NameServiceNFT::update_nft_type_info_meta<T>(&sender);
+    } 
 
     public (script) fun resolver_init<T: store>(sender:signer){
         Resolver::init<T>(&sender);
     }
 
-    public (script) fun address_resolver_init<T: store>(sender:signer){
-        AddressResolver::init<T>(&sender);
-    }
+    // public (script) fun address_resolver_init<T: store>(sender:signer){
+    //     AddressResolver::init<T>(&sender);
+    // }
 
-    public (script) fun address_resolver_allow_add<T: store>(sender:signer,name:vector<u8>,len:u64){
-        AddressResolver::add_allow_address_record<T>(&sender,&name,len);
-    }
+    // public (script) fun address_resolver_allow_add<T: store>(sender:signer,name:vector<u8>,len:u64){
+    //     AddressResolver::add_allow_address_record<T>(&sender,&name,len);
+    // }
 
     public (script) fun init_root<T: store>(sender:signer){
         Resolver::init<T>(&sender);

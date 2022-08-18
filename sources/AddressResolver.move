@@ -1,3 +1,4 @@
+#[test_only]
 module SNSadmin::AddressResolver{
 
     use StarcoinFramework::Table;
