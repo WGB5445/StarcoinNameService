@@ -1,4 +1,5 @@
-module SNSadmin::Record1{
+#[test_only]
+module SNSadmin::Record{
     use StarcoinFramework::Table;
     use StarcoinFramework::Vector;
     use StarcoinFramework::Option;

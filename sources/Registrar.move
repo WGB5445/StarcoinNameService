@@ -1,10 +1,10 @@
-module SNSadmin::registrar{
+module SNSadmin::Registrar{
 
     use StarcoinFramework::Table;
     use StarcoinFramework::Signer;
     use StarcoinFramework::Option;
     
-    friend SNSadmin::starcoin_name_service;
+    friend SNSadmin::StarcoinNameService;
 
     struct Registry<phantom ROOT> has key,store{
         list :  Table::Table<vector<u8>, RegistryDetails>

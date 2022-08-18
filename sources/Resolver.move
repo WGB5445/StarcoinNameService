@@ -1,10 +1,10 @@
-module SNSadmin::resolver{
+module SNSadmin::Resolver{
 
     use StarcoinFramework::Table;
     use StarcoinFramework::Option;
     use StarcoinFramework::Signer;
 
-    friend SNSadmin::starcoin_name_service;
+    friend SNSadmin::StarcoinNameService;
 
     struct Resolver<phantom Root: store> has key, store{
         list :  Table::Table<vector<u8>, address>

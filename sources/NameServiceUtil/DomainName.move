@@ -44,7 +44,8 @@ module SNSadmin::DomainName{
             node = Hash::keccak_256(node);
             i = i - 1;
         };
-        node
+        Vector::append(&mut node ,Hash::keccak_256( *Vector::borrow(&vec, 0) ));
+        Hash::keccak_256(node)
     }
 
     public fun  get_name_hash_2(root: &vector<u8>, name:&vector<u8>):vector<u8>{
@@ -98,6 +99,14 @@ module SNSadmin::DomainName{
         node = Hash::keccak_256(node);
         Vector::append(&mut node ,Hash::keccak_256(b"foo"));
         node = Hash::keccak_256(node);
+        assert!(node == x"de9b09fd7c5f901e23a3f19fecc54828e9c848539801e86591bd9801b019f84f",1301);
+    }
+
+    #[test]
+    fun test_get_domain_hash(){
+
+        let name = b"foo.eth";
+        let node = get_domain_name_hash(&name);
         assert!(node == x"de9b09fd7c5f901e23a3f19fecc54828e9c848539801e86591bd9801b019f84f",1301);
     }
 }

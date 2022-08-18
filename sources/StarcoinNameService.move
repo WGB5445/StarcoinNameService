@@ -1,4 +1,4 @@
-module SNSadmin::starcoin_name_service{
+module SNSadmin::StarcoinNameService{
     // use StarcoinFramework::Table;
     use StarcoinFramework::Vector;
     use StarcoinFramework::Signer;
@@ -12,12 +12,12 @@ module SNSadmin::starcoin_name_service{
     // use StarcoinFramework::Hash;
     use SNSadmin::DomainName;
     // use SNSadmin::Base64;
-    use SNSadmin::registrar;
-    use SNSadmin::root;
-    use SNSadmin::resolver;
-    use SNSadmin::name_service_nft::{Self,SNSMetaData,SNSBody};
+    use SNSadmin::Registrar;
+    use SNSadmin::Resolver;
+    use SNSadmin::NameServiceNFT::{Self,SNSMetaData,SNSBody};
     // use SNSadmin::Record1 as Record;
     
+    friend SNSadmin::StarcoinNameServiceScript;
 
     // public fun add_root(sender:&signer, root:&vector<u8>)acquires RootList{
     //     let account = Signer::address_of(sender);
@@ -29,7 +29,7 @@ module SNSadmin::starcoin_name_service{
     //     });
     // }
 
-    public fun register (sender:&signer, name: &vector<u8>, root_name:&vector<u8>, registration_duration: u64){
+    public (friend) fun register<ROOT: store>(sender:&signer, name: &vector<u8>, root_name:&vector<u8>, registration_duration: u64){
         assert!( registration_duration >= 60 * 60 * 24 * 180 ,1001);
 
         assert!( DomainName::dot_number(name) == 0 , 1003);
@@ -43,90 +43,92 @@ module SNSadmin::starcoin_name_service{
         Vector::append(&mut domain_name, *root_name);
     
         //TODO pay some STC
-        let op_registryDetails = registrar::get_details_by_hash<root::STC>(&name_hash);
+        let op_registryDetails = Registrar::get_details_by_hash<ROOT>(&name_hash);
         if(Option::is_some(&op_registryDetails)){
             let registryDetails = Option::destroy_some(op_registryDetails);
-            if(registrar::get_expiration_time(&registryDetails) < now_time){
+            if(Registrar::get_expiration_time(&registryDetails) < now_time){
                 
             }else{
                 abort 10001
             }
         };
-        let nft = name_service_nft::mint<root::STC>(account, name, root_name, now_time, now_time + registration_duration);
-        registrar::change<root::STC>(&name_hash, now_time + registration_duration, NFT::get_id(&nft));
+        let nft = NameServiceNFT::mint<ROOT>(account, name, root_name, now_time, now_time + registration_duration);
+        Registrar::change<ROOT>(&name_hash, now_time + registration_duration, NFT::get_id(&nft));
         
-        resolver::change<root::STC>(&name_hash, account);
+        Resolver::change<ROOT>(&name_hash, account);
 
         NFTGallery::deposit(sender, nft);
     }
 
     // //TODO : remove stc_address
-    // public fun use_domain (sender:&signer, id: u64, _stc_address: address) acquires ShardCap,RootList{
-    //     let roots = &mut borrow_global_mut<RootList>(@SNSadmin).roots;
+    public (friend) fun use_domain<ROOT: store> (sender:&signer, id: u64) {
+        let nft_op = NFTGallery::withdraw<SNSMetaData<ROOT>,SNSBody>(sender, id);
 
-    //     let shardCap = borrow_global_mut<ShardCap>(@SNSadmin);
+        assert!(Option::is_some(&nft_op),1003);
 
-    //     let nft_op = NFTGallery::withdraw<SNSMetaData,SNSBody>(sender, id);
+        let nft = Option::destroy_some(nft_op);
 
-    //     assert!(Option::is_some(&nft_op),1003);
+        let id = NFT::get_id(&nft);
+        let nft_meta = NFT::get_type_meta(&nft);
 
-    //     let nft = Option::destroy_some(nft_op);
+        let name_hash = DomainName::get_name_hash_2(&NameServiceNFT::get_parent(nft_meta), &NameServiceNFT::get_domain_name(nft_meta));
 
-    //     let id =NFT::get_id(&nft);
-    //     let nft_meta = NFT::get_type_meta(&nft);
-    //     let root;
-    //     if(Table::contains(roots, *&nft_meta.parent)){
-    //         root = Table::borrow_mut(roots, *&nft_meta.parent);
-    //     }else{
-    //         abort 10000
-    //     };
+        let op_registryDetails = Registrar::get_details_by_hash<ROOT>(&name_hash);
+        if(Option::is_some(&op_registryDetails)){
+            let registryDetails = Option::destroy_some(op_registryDetails);
+            if(Registrar::get_id(&registryDetails) == id){
+                
+            }else{
+                abort 10024
+            }
+        }else{
+            abort 30000
+        };
         
-    //     let name_hash = DomainName::get_name_hash_2(&nft_meta.parent, &nft_meta.domain_name);
-
-    //     if(Table::contains(&root.registry, copy name_hash)){
-    //         let registryDetails = Table::borrow_mut(&mut root.registry, copy name_hash);
-    //         if( registryDetails.id != id ){
-    //             abort 10001
-    //         }
-    //     }else{
-    //         abort 10002
-    //     };
+        NameServiceNFT::grant(sender, nft);
         
-    //     IdentifierNFT::grant(&mut shardCap.mint_cap, sender, nft);
-    // }
+    }
+
+    public (friend) fun unuse_domain<ROOT: store> (sender:&signer) {
+        let account = Signer::address_of(sender);
+        let nft = NameServiceNFT::revoke<ROOT>(account);
+        NFTGallery::deposit(sender, nft);
+    }
+
     
-    public fun change_stc_address(sender:&signer, id:Option<u64>, addr:address){
+    
+    public fun change_stc_address<ROOT: store>(sender:&signer, id:Option<u64>, addr:address){
         let account = Signer::address_of(sender);
         let (nft_id,nft_meta) = if( Option::is_none(&id)){
-            let op_info = IdentifierNFT::get_nft_info<SNSMetaData<root::STC>,SNSBody>(account);
+            let op_info = IdentifierNFT::get_nft_info<SNSMetaData<ROOT>,SNSBody>(account);
             assert!(Option::is_some(&op_info),102123);
             let info = Option::destroy_some(op_info);
             let (nft_id,_,_,nft_meta) = NFT::unpack_info(info);
             (nft_id, nft_meta)
         }else{
             let nft_id = *Option::borrow(&id);
-            let op_info = NFTGallery::get_nft_info_by_id<SNSMetaData<root::STC>,SNSBody>(account, nft_id);
+            let op_info = NFTGallery::get_nft_info_by_id<SNSMetaData<ROOT>,SNSBody>(account, nft_id);
             assert!(Option::is_some(&op_info),102123);
             let info = Option::destroy_some(op_info);
             let (nft_id,_,_,nft_meta) = NFT::unpack_info(info);
             (nft_id, nft_meta)
         };
 
-        let name_hash = DomainName::get_name_hash_2(&name_service_nft::get_parent(&nft_meta), &name_service_nft::get_domain_name(&nft_meta));
+        let name_hash = DomainName::get_name_hash_2(&NameServiceNFT::get_parent(&nft_meta), &NameServiceNFT::get_domain_name(&nft_meta));
         
-        let op_registryDetails = registrar::get_details_by_hash<root::STC>(&name_hash);
+        let op_registryDetails = Registrar::get_details_by_hash<ROOT>(&name_hash);
         if(Option::is_some(&op_registryDetails)){
             let registryDetails = Option::destroy_some(op_registryDetails);
-            if(registrar::get_id(&registryDetails) != nft_id){
-                
-            }else{
+            if(Registrar::get_id(&registryDetails) != nft_id){
                 abort 10001
+            }else{
+                
             }
         }else{
             abort 10002
         };
 
-        resolver::change<root::STC>(&name_hash, addr);
+        Resolver::change<ROOT>(&name_hash, addr);
     }
 
 
@@ -225,11 +227,32 @@ module SNSadmin::starcoin_name_service{
     //     // Record::destroy_address_record(addressRecord);
     // }
 
-    public fun resolve_stc_address(name_hash:&vector<u8>, _root_name:&vector<u8>):address {
-    
-        let op_addr = resolver::get_address_by_hash<root::STC>(name_hash);
+    public fun resolve_stc_address<T: store>(name_hash:&vector<u8>):address {
+        let op_addr = Resolver::get_address_by_hash<T>(name_hash);
         assert!(Option::is_some(&op_addr) ,1012);
         Option::destroy_some(op_addr)
+    }
+
+    public fun resolve_domain_name<ROOT: store>(addr: address):vector<u8>{
+        let op_info = IdentifierNFT::get_nft_info<SNSMetaData<ROOT>,SNSBody>(addr);
+        assert!(Option::is_some(&op_info),102123);
+        let info = Option::destroy_some(op_info);
+        let (nft_id,_,base_meta,nft_meta) = NFT::unpack_info(info);
+
+        let name_hash = DomainName::get_name_hash_2(&NameServiceNFT::get_parent(&nft_meta), &NameServiceNFT::get_domain_name(&nft_meta));
+        
+        let op_registryDetails = Registrar::get_details_by_hash<ROOT>(&name_hash);
+        if(Option::is_some(&op_registryDetails)){
+            let registryDetails = Option::destroy_some(op_registryDetails);
+            if(Registrar::get_id(&registryDetails) != nft_id){
+                abort 10001
+            }else{
+                
+            }
+        }else{
+            abort 10002
+        };
+        NFT::meta_name(&base_meta)
     }
 
     // public fun resolve_record_address(node:&vector<u8>, root_name:&vector<u8>,name:&vector<u8>):vector<u8> acquires RootList {
@@ -288,89 +311,103 @@ module SNSadmin::starcoin_name_service{
     //     // Record::destroy_address_record(addressRecord);
     // }
 }
-/*
-module SNSadmin::SNStestscript6{
-    use SNSadmin::SNS6 as SNS;
-    use SNSadmin::DomainName;
-    use StarcoinFramework::Signer;
+
+module SNSadmin::StarcoinNameServiceScript{
     use StarcoinFramework::Option;
+    use StarcoinFramework::Vector;
+    // use StarcoinFramework::Signer;
 
+    use SNSadmin::StarcoinNameService as SNS;
+    use SNSadmin::DomainName;
+    use SNSadmin::UTF8;
+    use SNSadmin::Root;
 
-    public (script) fun registrar(sender:signer, name: vector<u8>, root: vector<u8>,registration_duration: u64){
-        SNS::registrar(&sender, &name, &root, registration_duration);
+    public (script) fun register(sender:signer, name: vector<u8>,registration_duration: u64){
+        let name_split = UTF8::get_dot_split(&name);
+        let name_split_length = Vector::length(&name_split);
+        assert!(name_split_length == 2, 100 );
+        if( b"stc" == *Vector::borrow(&name_split, 1)){
+            SNS::register<Root::STC>(&sender, Vector::borrow(&name_split, 0), Vector::borrow(&name_split, 1), registration_duration);
+        }else{
+            abort 102333
+        }
     }
 
-    public (script) fun use_with_config (sender:signer, id: u64, stc_address: address){
-        SNS::use_domain(&sender,id,stc_address);
+    // public (script) fun use_with_config (sender:signer, id: u64, stc_address: address){
+    //     SNS::use_domain(&sender,id,stc_address);
+    // }
+
+    public (script) fun use_domain<ROOT: store>(sender:signer, id: u64){
+        SNS::use_domain<ROOT>(&sender, id);
     }
 
-    public (script) fun use_default (sender:signer, id: u64){
-        SNS::use_domain(&sender,id,Signer::address_of(&sender));
+    public (script) fun unuse_domain<ROOT: store>(sender:signer){
+        SNS::unuse_domain<ROOT>(&sender);
     }
 
-    public (script) fun unuse(sender:signer){
-        SNS::unuse(&sender);
+    public (script)fun change_stc_address<ROOT: store>(sender:signer,addr:address){
+        SNS::change_stc_address<ROOT>(&sender,Option::none<u64>(),addr);
     }
 
-    public (script)fun change_stc_address(sender:signer,addr:address){
-        SNS::change_stc_address(&sender,Option::none<u64>(),addr);
+    public (script)fun change_NFTGallery_stc_address<ROOT: store>(sender:signer,id:u64,addr:address){
+        SNS::change_stc_address<ROOT>(&sender,Option::some(id),addr);
     }
 
-    public (script)fun change_NFTGallery_stc_address(sender:signer,id:u64,addr:address){
-        SNS::change_stc_address(&sender,Option::some(id),addr);
-    }
+    // public (script)fun add_Record_address(sender:signer,name:vector<u8>,addr:vector<u8>){
+    //     SNS::change_Record_address(&sender,Option::none<u64>(),&name,&addr);
+    // }
 
-    public (script)fun add_Record_address(sender:signer,name:vector<u8>,addr:vector<u8>){
-        SNS::change_Record_address(&sender,Option::none<u64>(),&name,&addr);
-    }
-
-    public (script)fun change_NFTGallery_Record_address(sender:signer,id:u64,name:vector<u8>,addr:vector<u8>){
-        SNS::change_Record_address(&sender,Option::some(id),&name,&addr);
-    }
+    // public (script)fun change_NFTGallery_Record_address(sender:signer,id:u64,name:vector<u8>,addr:vector<u8>){
+    //     SNS::change_Record_address(&sender,Option::some(id),&name,&addr);
+    // }
     
 
-    public fun resolve_4_name(name:vector<u8>):address{
-        SNS::resolve_stc_address(&DomainName::get_name_hash_2(&b"stc",&name), &b"stc")
+    public fun resolve_4_name<ROOT: store>(name:vector<u8>):address{
+        SNS::resolve_stc_address<ROOT>(&DomainName::get_domain_name_hash(&name))
     }
 
-    public fun resolve_4_node(node:vector<u8>):address{
-        SNS::resolve_stc_address(&node,&b"stc")
+    public fun resolve_4_node<ROOT: store>(node:vector<u8>):address{
+        SNS::resolve_stc_address<ROOT>(&node)
     }
 
-    public fun resolve_record_address_4_name(domain:vector<u8>,name:vector<u8>):vector<u8>{
-        SNS::resolve_record_address(&DomainName::get_name_hash_2(&b"stc",&domain),&b"stc",&name)
-    }
+    // public fun resolve_record_address_4_name(domain:vector<u8>,name:vector<u8>):vector<u8>{
+    //     SNS::resolve_record_address(&DomainName::get_name_hash_2(&b"stc",&domain),&b"stc",&name)
+    // }
 
-    public fun resolve_record_address_4_node(node:vector<u8>,name:vector<u8>):vector<u8>{
-        SNS::resolve_record_address(&node,&b"stc",&name)
-    }
+    // public fun resolve_record_address_4_node(node:vector<u8>,name:vector<u8>):vector<u8>{
+    //     SNS::resolve_record_address(&node,&b"stc",&name)
+    // }
 
 }
 
-module SNSadmin::SNSInittestscript6{
-    use SNSadmin::SNS6 as SNS;
-    use SNSadmin::Record1 as Record;
+module SNSadmin::StarcoinNameServiceInitScript{
+    use SNSadmin::Resolver as Resolver;
+    use SNSadmin::Registrar as Registrar;
+    use SNSadmin::AddressResolver as AddressResolver;
+    use SNSadmin::NameServiceNFT as NameServiceNFT;
 
-
-    public (script) fun SNS_init(sender:signer){
-        SNS::init(&sender);
+    public (script) fun Registrar_init<T: store>(sender:signer){
+        Registrar::init<T>(&sender);
+    }
+    public (script)fun NameServiceNFT_init<T: store>(sender:signer){
+        NameServiceNFT::init<T>(&sender);
     }
 
-    public (script) fun add_root(sender:signer, root:vector<u8>){
-        SNS::add_root(&sender, &root);
+    public (script) fun resolver_init<T: store>(sender:signer){
+        Resolver::init<T>(&sender);
     }
 
-    public (script) fun Record_init(sender:signer){
-        Record::init(&sender);
+    public (script) fun address_resolver_init<T: store>(sender:signer){
+        AddressResolver::init<T>(&sender);
     }
 
-    public (script) fun Record_address_add(sender:signer,name:vector<u8>,len:u64){
-        Record::add_allow_address_record(&sender,&name,len);
+    public (script) fun address_resolver_allow_add<T: store>(sender:signer,name:vector<u8>,len:u64){
+        AddressResolver::add_allow_address_record<T>(&sender,&name,len);
     }
 
-    public (script) fun one_init(sender:signer){
-        SNS::init(&sender);
-        Record::init(&sender);
+    public (script) fun init_root<T: store>(sender:signer){
+        Resolver::init<T>(&sender);
+        Registrar::init<T>(&sender);
+        NameServiceNFT::init<T>(&sender);
     }
 }
-*/

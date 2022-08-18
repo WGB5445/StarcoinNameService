@@ -1,11 +1,11 @@
-module SNSadmin::address_resolver{
+module SNSadmin::AddressResolver{
 
     use StarcoinFramework::Table;
     use StarcoinFramework::Option;
     use StarcoinFramework::Signer;
     use StarcoinFramework::Vector;
 
-    friend SNSadmin::starcoin_name_service;
+    friend SNSadmin::StarcoinNameService;
 
     struct Resolver<phantom Root: store> has key, store{
         list :  Table::Table<vector<u8>, AddressRecord>

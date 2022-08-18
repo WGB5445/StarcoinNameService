@@ -1,11 +1,12 @@
-module SNSadmin::name_service_nft{
+module SNSadmin::NameServiceNFT{
     use StarcoinFramework::NFT;
     use StarcoinFramework::Vector;
     use StarcoinFramework::Signer;
+    use StarcoinFramework::IdentifierNFT;
     use SNSadmin::Base64;
 
 
-    friend SNSadmin::starcoin_name_service;
+    friend SNSadmin::StarcoinNameService;
 
 
     const SVG_Base64_Header :vector<u8> = b"data:image/svg+xml;base64,";
@@ -80,6 +81,17 @@ module SNSadmin::name_service_nft{
         info
     }
 
+    public (friend) fun grant<ROOT: store>(sender:&signer,nft: NFT::NFT<SNSMetaData<ROOT>,SNSBody>):NFT::NFTInfo<SNSMetaData<ROOT>> acquires ShardCap{
+        let shardCap = borrow_global_mut<ShardCap<ROOT>>(@SNSadmin);
+        let info = NFT::get_info(&nft);
+        IdentifierNFT::grant(&mut shardCap.mint_cap, sender, nft);
+        info
+    }
+
+    public (friend) fun revoke<ROOT: store>(addr:address): NFT::NFT<SNSMetaData<ROOT>,SNSBody> acquires ShardCap{
+        let shardCap = borrow_global_mut<ShardCap<ROOT>>(@SNSadmin);
+        IdentifierNFT::revoke<SNSMetaData<ROOT>,SNSBody>(&mut shardCap.burn_cap, addr)
+    }
     public fun get_domain_name<ROOT: store>(obj:&SNSMetaData<ROOT>):vector<u8>{
         *&obj.domain_name
     }
