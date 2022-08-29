@@ -10,8 +10,8 @@ module SNSadmin::StarcoinNameService{
     // use StarcoinFramework::Account;
     // use StarcoinFramework::Math;
     // use StarcoinFramework::Hash;
-    use SNSadmin::DomainName;
-    use SNSadmin::UTF8;
+    use SNSadmin::DomainNameASCII as DomainName;
+    use SNSadmin::ASCII;
     use SNSadmin::Registrar;
     use SNSadmin::Resolver;
     use SNSadmin::NameServiceNFT::{Self,SNSMetaData,SNSBody};
@@ -35,7 +35,7 @@ module SNSadmin::StarcoinNameService{
         assert!( DomainName::dot_number(name) == 0 , 1003);
         let account = Signer::address_of(sender);
 
-        let char_length = UTF8::get_utf8_length(name);
+        let char_length = ASCII::length(&ASCII::string(name));
         assert!( (char_length > 3) && (char_length < 20), 1300 );
 
         let now_time = Timestamp::now_seconds();
@@ -326,14 +326,17 @@ module SNSadmin::StarcoinNameServiceScript{
     // use StarcoinFramework::Signer;
 
     use SNSadmin::StarcoinNameService as SNS;
-    use SNSadmin::DomainName;
-    use SNSadmin::UTF8;
+    use SNSadmin::DomainNameASCII as DomainName;
     use SNSadmin::Root;
     use SNSadmin::Registrar;
     // use SNSadmin::NameServiceNFT::{SNSMetaData, SNSBody};
 
+    struct DomainInfo has copy,drop{
+        register_info : Registrar::RegistryDetails,
+    }
+
     public (script) fun register(sender:signer, name: vector<u8>,registration_duration: u64){
-        let name_split = UTF8::get_dot_split(&name);
+        let name_split = DomainName::get_dot_split(&name);
         let name_split_length = Vector::length(&name_split);
         assert!(name_split_length == 2, 100 );
         if( b"stc" == *Vector::borrow(&name_split, 1)){
@@ -384,7 +387,7 @@ module SNSadmin::StarcoinNameServiceScript{
     }
 
     public fun get_domain_expiration_time<ROOT: store>(name:vector<u8>):u64{
-        let name_split = UTF8::get_dot_split(&name);
+        let name_split = DomainName::get_dot_split(&name);
         let name_split_length = Vector::length(&name_split);
         assert!(name_split_length == 2, 100 );
         let name_hash = DomainName::get_domain_name_hash(&name);
@@ -394,6 +397,24 @@ module SNSadmin::StarcoinNameServiceScript{
         }else{
             0
         }
+    }
+
+    public fun get_domain_info<ROOT: store>(name:vector<u8>):Option::Option<DomainInfo>{
+        let name_split = DomainName::get_dot_split(&name);
+        let name_split_length = Vector::length(&name_split);
+        assert!(name_split_length == 2, 100 );
+        if( b"stc" == *Vector::borrow(&name_split, 1)){
+            let name_hash = DomainName::get_name_hash_2(Vector::borrow(&name_split, 1), Vector::borrow(&name_split, 0));
+            let op_registryDetails = Registrar::get_details_by_hash<ROOT>(&name_hash);
+            if(Option::is_some(&op_registryDetails)){
+                return Option::some(DomainInfo{
+                    register_info:Option::destroy_some(op_registryDetails)
+                })
+            }
+        }else{
+            abort 102333
+        };
+        Option::none<DomainInfo>()
     }
 
     // public fun get_all_domain_info<ROOT: store>(addr: address):vector<NFT::NFTInfo<SNSMetaData<ROOT>>>{
