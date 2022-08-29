@@ -74,12 +74,28 @@ module SNSadmin::DomainNameASCII{
         let vec = Vector::empty<vector<u8>>();
         let i = 0 ; 
         let length = Vector::length(&split);
-        while(i > length){
+        while(i < length){
             Vector::push_back(&mut vec, *ASCII::as_bytes(Vector::borrow(&split, i)));
             i = i + 1;
         };
         vec
     }
+
+    #[test]
+    fun test_split_name (){
+        let name = b"iamtimhhh.stc";
+        let string = ASCII::string(&name);
+        let split = ASCII::split_by_char(&string, ASCII::char(0x2E));
+        let vec = Vector::empty<vector<u8>>();
+        let i = 0 ; 
+        let length = Vector::length(&split);
+        while(i < length){
+            Vector::push_back(&mut vec, *ASCII::as_bytes(Vector::borrow(&split, i)));
+            i = i + 1;
+        };
+        StarcoinFramework::Debug::print(&vec)
+    }
+
     //TODO: prices
     public fun price (_name:vector<u8>):u128{
         1000

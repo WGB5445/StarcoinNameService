@@ -426,7 +426,11 @@ module SNSadmin::StarcoinNameServiceScript{
             abort 102333
         }
     }
-
+    #[test]
+    fun test_split_name (){
+        let name = b"iamtimhhh.stc";
+        StarcoinFramework::Debug::print(&SNSadmin::DomainNameASCII::get_dot_split(&name))
+    }
     // public fun get_all_domain_info<ROOT: store>(addr: address):vector<NFT::NFTInfo<SNSMetaData<ROOT>>>{
     //     let res = NFTGallery::get_nft_infos<SNSMetaData<ROOT>,SNSBody>(addr);
     //     let op_info = IdentifierNFT::get_nft_info<SNSMetaData<ROOT>,SNSBody>(addr);
