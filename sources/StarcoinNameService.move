@@ -329,10 +329,12 @@ module SNSadmin::StarcoinNameServiceScript{
     use SNSadmin::DomainNameASCII as DomainName;
     use SNSadmin::Root;
     use SNSadmin::Registrar;
+    use SNSadmin::Resolver;
     // use SNSadmin::NameServiceNFT::{SNSMetaData, SNSBody};
 
     struct DomainInfo has copy,drop{
-        register_info : Registrar::RegistryDetails,
+        registryDetails : Registrar::RegistryDetails,
+        stc_address   : address 
     }
 
     public (script) fun register(sender:signer, name: vector<u8>,registration_duration: u64){
@@ -406,15 +408,23 @@ module SNSadmin::StarcoinNameServiceScript{
         if( b"stc" == *Vector::borrow(&name_split, 1)){
             let name_hash = DomainName::get_name_hash_2(Vector::borrow(&name_split, 1), Vector::borrow(&name_split, 0));
             let op_registryDetails = Registrar::get_details_by_hash<ROOT>(&name_hash);
-            if(Option::is_some(&op_registryDetails)){
-                return Option::some(DomainInfo{
-                    register_info:Option::destroy_some(op_registryDetails)
-                })
-            }
+            let registryDetails = if(Option::is_some(&op_registryDetails)){
+                Option::destroy_some(op_registryDetails)
+            }else{
+                return Option::none<DomainInfo>()
+            };
+            let op_stc_address = Resolver::get_address_by_hash<ROOT>(&name_hash);
+            let stc_address = if(Option::is_some(&op_stc_address)){
+                Option::destroy_some(op_stc_address)
+            }else{
+                return Option::none<DomainInfo>()
+            };
+            return Option::some(DomainInfo{registryDetails,
+                                stc_address
+                                })
         }else{
             abort 102333
-        };
-        Option::none<DomainInfo>()
+        }
     }
 
     // public fun get_all_domain_info<ROOT: store>(addr: address):vector<NFT::NFTInfo<SNSMetaData<ROOT>>>{
