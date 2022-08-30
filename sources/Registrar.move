@@ -1,9 +1,9 @@
 module SNSadmin::Registrar{
 
     use StarcoinFramework::Table;
-    use StarcoinFramework::Signer;
     use StarcoinFramework::Option;
-    
+    use SNSadmin::Config;
+
     friend SNSadmin::StarcoinNameService;
 
     struct Registry<phantom ROOT> has key,store{
@@ -16,8 +16,7 @@ module SNSadmin::Registrar{
     }
 
     public fun init<ROOT: store>(sender:&signer){
-        let account = Signer::address_of(sender);
-        assert!(account == @SNSadmin,10012);
+        assert!(Config::is_creater_by_signer(sender), 10012);
         
         move_to(sender, Registry<ROOT>{
             list : Table::new<vector<u8>, RegistryDetails>(),

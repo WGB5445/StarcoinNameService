@@ -3,7 +3,8 @@ module SNSadmin::Record{
     use StarcoinFramework::Table;
     use StarcoinFramework::Vector;
     use StarcoinFramework::Option;
-    use StarcoinFramework::Signer;
+    use SNSadmin::Config;
+ 
 
     struct AddressRecord<phantom ROOT> has key,store{
         addresses :     Table::Table<vector<u8>,vector<u8>> ,
@@ -42,8 +43,7 @@ module SNSadmin::Record{
     
 
     public fun init<ROOT: store>(sender:&signer){
-        let account = Signer::address_of(sender);
-        assert!(account == @SNSadmin,10012);
+        assert!(Config::is_creater_by_signer(sender), 10012);
 
         move_to(sender,AddressRecord<ROOT>{
             addresses :  Table::new<vector<u8>,vector<u8>>(),
@@ -132,8 +132,7 @@ module SNSadmin::Record{
     }
 
     public fun add_allow_address_record<ROOT>(sender:&signer,name:&vector<u8>,len:u64)acquires AddressRecordAllow{
-        let account = Signer::address_of(sender);
-        assert!(account == @SNSadmin,10012);
+        assert!(Config::is_creater_by_signer(sender), 10012);
         let allow = borrow_global_mut<AddressRecordAllow<ROOT>>(@SNSadmin);
         let list = &mut allow.list;
 
@@ -160,8 +159,7 @@ module SNSadmin::Record{
     }
 
     public fun remove_allow_address_record<ROOT>(sender:&signer,name:&vector<u8>,len:u64)acquires AddressRecordAllow{
-        let account = Signer::address_of(sender);
-        assert!(account == @SNSadmin,10012);
+        assert!(Config::is_creater_by_signer(sender), 10012);
         let allow = borrow_global_mut<AddressRecordAllow<ROOT>>(@SNSadmin);
         let list = &mut allow.list;
 
@@ -177,8 +175,7 @@ module SNSadmin::Record{
 
     public fun remove_all_allow_address_record_len<ROOT>(sender:&signer,name:&vector<u8>)acquires AddressRecordAllow{
         
-        let account = Signer::address_of(sender);
-        assert!(account == @SNSadmin,10012);
+        assert!(Config::is_creater_by_signer(sender), 10012);
         let allow = borrow_global_mut<AddressRecordAllow<ROOT>>(@SNSadmin);
         let list = &mut allow.list;
 
@@ -198,8 +195,7 @@ module SNSadmin::Record{
     }
 
     public fun remove_all_allow_address_record<ROOT>(sender:&signer)acquires AddressRecordAllow{
-        let account = Signer::address_of(sender);
-        assert!(account == @SNSadmin,10012);
+        assert!(Config::is_creater_by_signer(sender), 10012);
         let allow = borrow_global_mut<AddressRecordAllow<ROOT>>(@SNSadmin);
         let allow_list = &mut allow.list;
 

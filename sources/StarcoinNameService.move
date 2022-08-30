@@ -15,6 +15,7 @@ module SNSadmin::StarcoinNameService{
     use SNSadmin::Registrar;
     use SNSadmin::Resolver;
     use SNSadmin::NameServiceNFT::{Self,SNSMetaData,SNSBody};
+ 
     // use SNSadmin::Record1 as Record;
     
     friend SNSadmin::StarcoinNameServiceScript;
@@ -426,6 +427,8 @@ module SNSadmin::StarcoinNameServiceScript{
             abort 102333
         }
     }
+
+    
     #[test]
     fun test_split_name (){
         let name = b"iamtimhhh.stc";

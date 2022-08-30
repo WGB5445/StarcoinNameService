@@ -1,9 +1,10 @@
 module SNSadmin::NameServiceNFT{
     use StarcoinFramework::NFT;
     use StarcoinFramework::Vector;
-    use StarcoinFramework::Signer;
     use StarcoinFramework::IdentifierNFT;
     use SNSadmin::Base64;
+    use SNSadmin::Config;
+ 
 
 
     friend SNSadmin::StarcoinNameService;
@@ -31,8 +32,7 @@ module SNSadmin::NameServiceNFT{
     struct SNSBody has store{}
 
     public fun init<ROOT: store>(sender:&signer){
-        let account = Signer::address_of(sender);
-        assert!(account == @SNSadmin,10012);
+        assert!(Config::is_creater_by_signer(sender), 10012);
         NFT::register_v2<SNSMetaData<ROOT>>(sender, NFT::new_meta(b"Starcoin Name Service",b"Starcoin Name Service - Test Net"));
         
         move_to(sender,ShardCap{
@@ -43,8 +43,7 @@ module SNSadmin::NameServiceNFT{
     }
 
     public fun update_nft_type_info_meta<ROOT: store>(sender:&signer) acquires ShardCap{
-        let account = Signer::address_of(sender);
-        assert!(account == @SNSadmin,10012);
+        assert!(Config::is_creater_by_signer(sender), 10012);
         let shardCap = borrow_global_mut<ShardCap<ROOT>>(@SNSadmin);
         NFT::update_nft_type_info_meta_with_cap<SNSMetaData<ROOT>>(&mut shardCap.updata_cap, NFT::new_meta(b"Starcoin Name Service",b"Starcoin Name Service - Test Net"));
     }
