@@ -338,6 +338,7 @@ module SNSadmin::StarcoinNameServiceScript{
         stc_address   : address 
     }
 
+    //TODO : add <ROOT:store>
     public (script) fun register(sender:signer, name: vector<u8>,registration_duration: u64){
         let name_split = DomainName::get_dot_split(&name);
         let name_split_length = Vector::length(&name_split);
@@ -455,10 +456,16 @@ module SNSadmin::StarcoinNameServiceScript{
 }
 
 module SNSadmin::StarcoinNameServiceInitScript{
+    use StarcoinFramework::Signer;
     use SNSadmin::Resolver as Resolver;
     use SNSadmin::Registrar as Registrar;
     // use SNSadmin::AddressResolver as AddressResolver;
     use SNSadmin::NameServiceNFT as NameServiceNFT;
+    use SNSadmin::Config;
+
+    public (script) fun Config_init(sender:signer){
+        Config::init(&sender);
+    }
 
     public (script) fun Registrar_init<T: store>(sender:signer){
         Registrar::init<T>(&sender);
@@ -483,9 +490,10 @@ module SNSadmin::StarcoinNameServiceInitScript{
     //     AddressResolver::add_allow_address_record<T>(&sender,&name,len);
     // }
 
-    public (script) fun init_root<T: store>(sender:signer){
+    public (script) fun init_root<T: store>(sender:signer, root: vector<u8>){
         Resolver::init<T>(&sender);
         Registrar::init<T>(&sender);
         NameServiceNFT::init<T>(&sender);
+        Config::modify_RootMap<T>(&sender, &root, Signer::address_of(&sender));
     }
 }
