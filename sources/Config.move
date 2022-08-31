@@ -1,6 +1,7 @@
 module SNSadmin::Config{
     use StarcoinFramework::Table;
     use StarcoinFramework::Signer;
+    use StarcoinFramework::Option::{Self, Option};
     
     struct RootConfig has key,store{
         config : Table::Table<vector<u8>,address>
@@ -36,16 +37,18 @@ module SNSadmin::Config{
     }
 
     public fun is_admin_by_address<ROOT:store>(addr: address):bool acquires RootConfig, RootMap{
-        let rootConfig = &borrow_global<RootConfig>(@SNSadmin).config;
-        let root_str = &borrow_global<RootMap<ROOT>>(@SNSadmin).root;
+        let rootConfig = &borrow_global<RootConfig>(creater()).config;
+        let root_str = &borrow_global<RootMap<ROOT>>(creater()).root;
 
         if(Table::contains(rootConfig, *root_str)){
-            *Table::borrow(rootConfig, *root_str) == addr
+            (*Table::borrow(rootConfig, *root_str) == addr) || is_creater_by_address(addr)
         }else{
             abort 100320
         }
     }
+    
 
+    // Add root
     public fun modify_RootMap<ROOT:store>(sender:&signer, root: &vector<u8>, admin:address) acquires RootConfig, RootMap{
         assert!(is_creater_by_signer(sender),10012);
         if(!exists<RootMap<ROOT>>(creater())){
@@ -65,6 +68,21 @@ module SNSadmin::Config{
         };
     }
 
+    // Delete root
+    public fun delete_RootMap<ROOT:store>(sender:&signer, root: &vector<u8>):Option<address> acquires RootConfig, RootMap{
+        assert!(is_creater_by_signer(sender),10012);
+        assert!(exists<RootMap<ROOT>>(creater()), 10031);
+        let RootMap<ROOT>{
+            root: _
+        } = move_from<RootMap<ROOT>>(creater());
+        let rootConfig = &mut borrow_global_mut<RootConfig>(creater()).config;
+        if(Table::contains(rootConfig, *root)){
+           Option::some(Table::remove(rootConfig, *root))
+        }else{
+            Option::none<address>()
+        }
+    }
+
     public fun get_root<ROOT:store>():vector<u8> acquires RootMap{
         *&borrow_global<RootMap<ROOT>>(creater()).root
     }
@@ -75,10 +93,14 @@ module SNSadmin::Config{
         *Table::borrow(rootConfig, *root)
     }
 
-    
-    // #[test(_sender = @SNSadmin)]
-    // fun test_Config (_sender: signer){
-        
-    // }
+
+    #[test(sender = @SNSadmin)]
+    fun test_Config (sender: signer) acquires RootConfig, RootMap{
+        use SNSadmin::Root::STC;
+        init(&sender);
+        modify_RootMap<STC>(&sender, &b"stc", @0x1);
+        assert!(get_root<STC>() == b"stc",1);
+        assert!(get_admin_by_root<STC>() == @0x1, 2);
+    }
 
 }

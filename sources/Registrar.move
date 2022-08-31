@@ -24,7 +24,7 @@ module SNSadmin::Registrar{
     }
 
     public (friend) fun change<ROOT: store> (hash:&vector<u8>, expiration_time: u64, id: u64)acquires Registry{
-        let registry = &mut borrow_global_mut<Registry<ROOT>>(@SNSadmin).list;
+        let registry = &mut borrow_global_mut<Registry<ROOT>>(Config::creater()).list;
         
         if(Table::contains(registry, *hash)){
             let registryDetails = Table::remove(registry, *hash);
@@ -39,7 +39,7 @@ module SNSadmin::Registrar{
     }
 
     public (friend) fun delete<ROOT: store> (hash:&vector<u8>):(u64,u64)acquires Registry{
-        let registry = &mut borrow_global_mut<Registry<ROOT>>(@SNSadmin).list;
+        let registry = &mut borrow_global_mut<Registry<ROOT>>(Config::creater()).list;
         
         if(Table::contains(registry, *hash)){
             let registryDetails = Table::borrow_mut(registry, *hash);
@@ -51,7 +51,7 @@ module SNSadmin::Registrar{
 
     // Read 
     public fun get_details_by_hash<ROOT: store>(hash:&vector<u8>):Option::Option<RegistryDetails> acquires Registry{
-        let registry = & borrow_global<Registry<ROOT>>(@SNSadmin).list;
+        let registry = & borrow_global<Registry<ROOT>>(Config::creater()).list;
         if(Table::contains(registry, *hash)){
             let registryDetails = Table::borrow(registry, *hash);
             Option::some(*registryDetails)

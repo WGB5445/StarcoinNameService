@@ -20,7 +20,7 @@ module SNSadmin::Resolver{
     }
     
     public (friend) fun change<ROOT: store>(hash: &vector<u8>, addr: address) acquires Resolver{
-        let resolver = &mut borrow_global_mut<Resolver<ROOT>>(@SNSadmin).list;
+        let resolver = &mut borrow_global_mut<Resolver<ROOT>>(Config::creater()).list;
         
         if(Table::contains(resolver, *hash)){
             *Table::borrow_mut(resolver, *hash) = addr;
@@ -30,7 +30,7 @@ module SNSadmin::Resolver{
     }
 
     public (friend) fun delete<ROOT: store>(hash: &vector<u8>):Option::Option<address> acquires Resolver{
-        let resolver = &mut borrow_global_mut<Resolver<ROOT>>(@SNSadmin).list;
+        let resolver = &mut borrow_global_mut<Resolver<ROOT>>(Config::creater()).list;
         
         if(Table::contains(resolver, *hash)){
             Option::some(Table::remove(resolver, *hash))
@@ -40,7 +40,7 @@ module SNSadmin::Resolver{
     }
 
     public fun get_address_by_hash<ROOT: store>(hash: &vector<u8>):Option::Option<address> acquires Resolver{
-        let resolver = & borrow_global<Resolver<ROOT>>(@SNSadmin).list;
+        let resolver = & borrow_global<Resolver<ROOT>>(Config::creater()).list;
         
         if(Table::contains(resolver, *hash)){
             Option::some(*Table::borrow(resolver, *hash))

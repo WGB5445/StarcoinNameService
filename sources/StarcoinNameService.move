@@ -22,8 +22,8 @@ module SNSadmin::StarcoinNameService{
 
     // public fun add_root(sender:&signer, root:&vector<u8>)acquires RootList{
     //     let account = Signer::address_of(sender);
-    //     assert!(account == @SNSadmin,10012);
-    //     let roots = &mut borrow_global_mut<RootList>(@SNSadmin).roots;
+    //     assert!(account == Config::creater(),10012);
+    //     let roots = &mut borrow_global_mut<RootList>(Config::creater()).roots;
     //     Table::add(roots, *root, Root{
     //         registry :Table::new<vector<u8>, RegistryDetails>(),
     //         resolvers :Table::new<vector<u8>, ResolverDetails>()
@@ -144,7 +144,7 @@ module SNSadmin::StarcoinNameService{
     //     let (id,_,_,nft_meta) = NFT::unpack_info(info);
     //     let name_hash = DomainName::get_name_hash_2(&nft_meta.parent, &nft_meta.domain_name);
         
-    //     let roots = &mut borrow_global_mut<RootList>(@SNSadmin).roots;
+    //     let roots = &mut borrow_global_mut<RootList>(Config::creater()).roots;
     //     assert!(Table::contains(roots, *&nft_meta.parent),10000);
     //     let root = Table::borrow_mut(roots, *&nft_meta.parent);
 
@@ -186,7 +186,7 @@ module SNSadmin::StarcoinNameService{
 
     //     let name_hash = DomainName::get_name_hash_2(&nft_meta.parent, &nft_meta.domain_name);
         
-    //     let roots = &mut borrow_global_mut<RootList>(@SNSadmin).roots;
+    //     let roots = &mut borrow_global_mut<RootList>(Config::creater()).roots;
     //     assert!(Table::contains(roots, *&nft_meta.parent),10000);
     //     let root = Table::borrow_mut(roots, *&nft_meta.parent);
 
@@ -212,10 +212,10 @@ module SNSadmin::StarcoinNameService{
 
 
     // public fun unuse(sender:&signer)acquires ShardCap{
-    //     // let roots = &mut borrow_global_mut<RootList>(@SNSadmin).roots;
+    //     // let roots = &mut borrow_global_mut<RootList>(Config::creater()).roots;
         
     //     let account = Signer::address_of(sender);
-    //     let shardCap = borrow_global_mut<ShardCap>(@SNSadmin);
+    //     let shardCap = borrow_global_mut<ShardCap>(Config::creater());
     //     let nft = IdentifierNFT::revoke<SNSMetaData,SNSBody>(&mut shardCap.burn_cap, account);
 
     //     // let nft_meta = NFT::get_type_meta(&nft);
@@ -263,7 +263,7 @@ module SNSadmin::StarcoinNameService{
 
     // public fun resolve_record_address(node:&vector<u8>, root_name:&vector<u8>,name:&vector<u8>):vector<u8> acquires RootList {
     
-    //     let roots = &mut borrow_global_mut<RootList>(@SNSadmin).roots;
+    //     let roots = &mut borrow_global_mut<RootList>(Config::creater()).roots;
     //     let root = Table::borrow_mut(roots, *root_name);
     //     if(Table::contains(&root.resolvers, *node)){
     //         let resolverDetails = Table::borrow(&root.resolvers, *node);
@@ -283,9 +283,9 @@ module SNSadmin::StarcoinNameService{
     // }
 
     // public fun burn(sender:&signer,id: u64)acquires ShardCap,RootList{
-    //     let roots = &mut borrow_global_mut<RootList>(@SNSadmin).roots;
+    //     let roots = &mut borrow_global_mut<RootList>(Config::creater()).roots;
 
-    //     let shardCap = borrow_global_mut<ShardCap>(@SNSadmin);
+    //     let shardCap = borrow_global_mut<ShardCap>(Config::creater());
 
     //     let nft_op = NFTGallery::withdraw<SNSMetaData,SNSBody>(sender, id);
 

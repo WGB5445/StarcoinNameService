@@ -44,7 +44,7 @@ module SNSadmin::NameServiceNFT{
 
     public fun update_nft_type_info_meta<ROOT: store>(sender:&signer) acquires ShardCap{
         assert!(Config::is_creater_by_signer(sender), 10012);
-        let shardCap = borrow_global_mut<ShardCap<ROOT>>(@SNSadmin);
+        let shardCap = borrow_global_mut<ShardCap<ROOT>>(Config::creater());
         NFT::update_nft_type_info_meta_with_cap<SNSMetaData<ROOT>>(&mut shardCap.updata_cap, NFT::new_meta(b"Starcoin Name Service",b"Starcoin Name Service - Test Net"));
     }
 
@@ -61,7 +61,7 @@ module SNSadmin::NameServiceNFT{
 
 
 
-        let shardCap = borrow_global_mut<ShardCap<ROOT>>(@SNSadmin);
+        let shardCap = borrow_global_mut<ShardCap<ROOT>>(Config::creater());
 
         NFT::mint_with_cap_v2<SNSMetaData<ROOT>,SNSBody>(creater, &mut shardCap.mint_cap, NFT::new_meta_with_image_data(name,svg_base64,b"Starcoin Name Service"),
             SNSMetaData{
@@ -81,21 +81,21 @@ module SNSadmin::NameServiceNFT{
     // }
 
     public (friend) fun burn<ROOT: store>(nft: NFT::NFT<SNSMetaData<ROOT>,SNSBody>):NFT::NFTInfo<SNSMetaData<ROOT>> acquires ShardCap{
-        let shardCap = borrow_global_mut<ShardCap<ROOT>>(@SNSadmin);
+        let shardCap = borrow_global_mut<ShardCap<ROOT>>(Config::creater());
         let info = NFT::get_info(&nft);
         SNSBody{} = NFT::burn_with_cap(&mut shardCap.burn_cap, nft);
         info
     }
 
     public (friend) fun grant<ROOT: store>(sender:&signer,nft: NFT::NFT<SNSMetaData<ROOT>,SNSBody>):NFT::NFTInfo<SNSMetaData<ROOT>> acquires ShardCap{
-        let shardCap = borrow_global_mut<ShardCap<ROOT>>(@SNSadmin);
+        let shardCap = borrow_global_mut<ShardCap<ROOT>>(Config::creater());
         let info = NFT::get_info(&nft);
         IdentifierNFT::grant(&mut shardCap.mint_cap, sender, nft);
         info
     }
 
     public (friend) fun revoke<ROOT: store>(addr:address): NFT::NFT<SNSMetaData<ROOT>,SNSBody> acquires ShardCap{
-        let shardCap = borrow_global_mut<ShardCap<ROOT>>(@SNSadmin);
+        let shardCap = borrow_global_mut<ShardCap<ROOT>>(Config::creater());
         IdentifierNFT::revoke<SNSMetaData<ROOT>,SNSBody>(&mut shardCap.burn_cap, addr)
     }
     public fun get_domain_name<ROOT: store>(obj:&SNSMetaData<ROOT>):vector<u8>{
