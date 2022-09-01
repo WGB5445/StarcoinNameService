@@ -1,17 +1,18 @@
 module SNSadmin::StarcoinNameServiceScript{
     use StarcoinFramework::Option;
     use StarcoinFramework::Vector;
-    // use StarcoinFramework::NFT;
+    use StarcoinFramework::NFT;
     // use StarcoinFramework::IdentifierNFT;
     // use StarcoinFramework::NFTGallery;
-    // use StarcoinFramework::Signer;
+    use StarcoinFramework::Signer;
 
     use SNSadmin::StarcoinNameService as SNS;
     use SNSadmin::DomainNameASCII as DomainName;
     use SNSadmin::Root;
     use SNSadmin::Registrar;
     use SNSadmin::Resolver;
-    // use SNSadmin::NameServiceNFT::{SNSMetaData, SNSBody};
+    use SNSadmin::AddressResolver;
+    use SNSadmin::NameServiceNFT;
 
     struct DomainInfo has copy,drop{
         registryDetails : Registrar::RegistryDetails,
@@ -50,9 +51,15 @@ module SNSadmin::StarcoinNameServiceScript{
         SNS::change_stc_address<ROOT>(&sender,Option::some(id),addr);
     }
 
-    // public (script)fun add_Record_address(sender:signer,name:vector<u8>,addr:vector<u8>){
-    //     SNS::change_Record_address(&sender,Option::none<u64>(),&name,&addr);
-    // }
+    public (script)fun add_Record_address<ROOT:store>(sender:signer,name:vector<u8>,addr:vector<u8>){
+        let account = Signer::address_of(&sender);
+        let info = SNS::get_identifier_info<ROOT>(account);
+        let (id,_,_,nft_meta) = NFT::unpack_info(info);
+        let name_hash = DomainName::get_name_hash_2(&NameServiceNFT::get_parent(&nft_meta), &NameServiceNFT::get_domain_name(&nft_meta));
+        let registryDetails = Option::destroy_some(Registrar::get_details_by_hash<ROOT>(&name_hash));
+        assert!(id == Registrar::get_id(&registryDetails), 10124);
+        AddressResolver::change_address<ROOT>(&name_hash, &name, &addr);
+    }
 
     // public (script)fun change_NFTGallery_Record_address(sender:signer,id:u64,name:vector<u8>,addr:vector<u8>){
     //     SNS::change_Record_address(&sender,Option::some(id),&name,&addr);
@@ -109,11 +116,16 @@ module SNSadmin::StarcoinNameServiceScript{
         }
     }
 
+    public fun get_address_record<ROOT: store>(name: vector<u8>, addr_name: vector<u8>):vector<u8>{
+       let op_vec = AddressResolver::get_address_record<ROOT>(&DomainName::get_domain_name_hash(&name), &addr_name);
+       assert!(Option::is_some(&op_vec),101234);
+       Option::destroy_some(op_vec)
+    }
     
     #[test]
     fun test_split_name (){
-        let name = b"iamtimhhh.stc";
-        StarcoinFramework::Debug::print(&SNSadmin::DomainNameASCII::get_dot_split(&name))
+        let name = b"starcoin.stc";
+        StarcoinFramework::Debug::print(&SNSadmin::DomainNameASCII::get_domain_name_hash(&name));
     }
     // public fun get_all_domain_info<ROOT: store>(addr: address):vector<NFT::NFTInfo<SNSMetaData<ROOT>>>{
     //     let res = NFTGallery::get_nft_infos<SNSMetaData<ROOT>,SNSBody>(addr);

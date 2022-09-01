@@ -150,4 +150,10 @@ module SNSadmin::DomainNameASCII{
         let node = get_domain_name_hash(&name);
         assert!(node == x"de9b09fd7c5f901e23a3f19fecc54828e9c848539801e86591bd9801b019f84f",1301);
     }
+
+    #[test]
+    fun test_get_domain_hash_2(){
+        let node = get_name_hash_2(&b"eth", &b"foo");
+        assert!(node == x"de9b09fd7c5f901e23a3f19fecc54828e9c848539801e86591bd9801b019f84f",1301);
+    }
 }

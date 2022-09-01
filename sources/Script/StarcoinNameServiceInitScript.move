@@ -6,6 +6,7 @@ module SNSadmin::StarcoinNameServiceInitScript{
     use SNSadmin::NameServiceNFT as NameServiceNFT;
     use SNSadmin::Config as Config;
     use SNSadmin::UpgradeManager as UpgradeManager;
+    use SNSadmin::AddressResolver;
 
     public (script) fun Config_init(sender:signer){
         Config::init(&sender);
@@ -18,7 +19,7 @@ module SNSadmin::StarcoinNameServiceInitScript{
     public (script) fun Registrar_init<T: store>(sender:signer){
         Registrar::init<T>(&sender);
     }
-    
+
     public (script) fun NameServiceNFT_init<T: store>(sender:signer){
         NameServiceNFT::init<T>(&sender);
     }
@@ -29,6 +30,10 @@ module SNSadmin::StarcoinNameServiceInitScript{
 
     public (script) fun Resolver_init<T: store>(sender:signer){
         Resolver::init<T>(&sender);
+    }
+
+    public (script) fun AddressRecord_init<T: store>(sender:signer){
+        AddressResolver::init<T>(&sender);
     }
 
     // public (script) fun address_resolver_init<T: store>(sender:signer){
@@ -49,6 +54,7 @@ module SNSadmin::StarcoinNameServiceInitScript{
         Resolver::init<T>(&sender);
         Registrar::init<T>(&sender);
         NameServiceNFT::init<T>(&sender);
+        AddressResolver::init<T>(&sender);
         Config::modify_RootMap<T>(&sender, &root, Signer::address_of(&sender));
     }
 }

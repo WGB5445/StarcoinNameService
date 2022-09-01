@@ -1,4 +1,3 @@
-#[test_only]
 module SNSadmin::AddressResolver{
 
     use StarcoinFramework::Table;
@@ -6,7 +5,7 @@ module SNSadmin::AddressResolver{
     use StarcoinFramework::Vector;
     use SNSadmin::Config;
 
-    friend SNSadmin::StarcoinNameService;
+    friend SNSadmin::StarcoinNameServiceScript;
 
     struct Resolver<phantom Root: store> has key, store{
         list :  Table::Table<vector<u8>, AddressRecord>
@@ -40,14 +39,14 @@ module SNSadmin::AddressResolver{
         });
     }
 
-    public fun change_address_record<ROOT: store>(hash: &vector<u8>, addr_name:&vector<u8>, addr:&vector<u8>):Option::Option<vector<u8>> acquires AddressRecordAllow, Resolver{
+    public (friend) fun change_address<ROOT: store>(hash: &vector<u8>, addr_name:&vector<u8>, addr:&vector<u8>):Option::Option<vector<u8>> acquires AddressRecordAllow, Resolver{
         if(Vector::length(addr) == 0){
-            remove_address_record<ROOT>(hash, addr_name);
+            remove_address<ROOT>(hash, addr_name);
             return Option::none<vector<u8>>()
         };
 
         assert!(is_allow_address_record<ROOT>(addr_name, addr),10013);
-        let resolver = &mut borrow_global_mut<Resolver<ROOT>>(@SNSadmin).list;
+        let resolver = &mut borrow_global_mut<Resolver<ROOT>>(Config::creater()).list;
         if(Table::contains(resolver, *hash)){
             let address_record = Table::borrow_mut(resolver, *hash);
             if(Table::contains(&mut address_record.addresses, *addr_name)){
@@ -69,8 +68,8 @@ module SNSadmin::AddressResolver{
         }
     }
 
-    public fun remove_address_record<ROOT: store>(hash: &vector<u8> , addr_name:&vector<u8>):Option::Option<vector<u8>> acquires Resolver{
-        let resolver = &mut borrow_global_mut<Resolver<ROOT>>(@SNSadmin).list;
+    public (friend) fun remove_address<ROOT: store>(hash: &vector<u8> , addr_name:&vector<u8>):Option::Option<vector<u8>> acquires Resolver{
+        let resolver = &mut borrow_global_mut<Resolver<ROOT>>(Config::creater()).list;
         if(Table::contains(resolver, *hash)){
             let address_record = Table::borrow_mut(resolver, *hash);
             if(Table::contains(&mut address_record.addresses, *addr_name)){
@@ -86,8 +85,24 @@ module SNSadmin::AddressResolver{
         }   
     }
 
+    public (friend) fun remove_record<ROOT: store>(hash: &vector<u8>) acquires Resolver{
+        let resolver = &mut borrow_global_mut<Resolver<ROOT>>(Config::creater()).list;
+        if(Table::contains(resolver, *hash)){
+            let address_record = Table::borrow_mut(resolver, *hash);
+            let length = Vector::length(&address_record.all);
+            let i = 0;
+            while(i < length){
+                let addr_name = Vector::remove(&mut address_record.all, 0);
+                Table::remove(&mut address_record.addresses, addr_name);
+                i = i + 1;
+            };
+        }else{
+           
+        };
+    }
+
     public fun is_allow_address_record<ROOT: store>(name:&vector<u8>, addr:&vector<u8>):bool acquires AddressRecordAllow{
-        let list = &borrow_global<AddressRecordAllow<ROOT>>(@SNSadmin).list;
+        let list = &borrow_global<AddressRecordAllow<ROOT>>(Config::creater()).list;
 
         if(Table::contains(list, *name)){
             let addr_len  =  Vector::length(addr);
@@ -99,7 +114,7 @@ module SNSadmin::AddressResolver{
 
     public fun add_allow_address_record<ROOT: store>(sender:&signer, name:&vector<u8>,len:u64)acquires AddressRecordAllow{
         assert!(Config::is_admin_by_signer<ROOT>(sender), 10012);
-        let allow = borrow_global_mut<AddressRecordAllow<ROOT>>(@SNSadmin);
+        let allow = borrow_global_mut<AddressRecordAllow<ROOT>>(Config::creater());
         let list = &mut allow.list;
 
         if(Table::contains(list, *name)){
@@ -126,7 +141,7 @@ module SNSadmin::AddressResolver{
 
     public fun remove_allow_address_record<ROOT: store>(sender:&signer,name:&vector<u8>,len:u64)acquires AddressRecordAllow{
         assert!(Config::is_admin_by_signer<ROOT>(sender), 10012);
-        let allow = borrow_global_mut<AddressRecordAllow<ROOT>>(@SNSadmin);
+        let allow = borrow_global_mut<AddressRecordAllow<ROOT>>(Config::creater());
         let list = &mut allow.list;
 
         if(Table::contains(list, *name)){
@@ -142,7 +157,7 @@ module SNSadmin::AddressResolver{
     public fun remove_all_allow_address_record_len<ROOT: store>(sender:&signer,name:&vector<u8>)acquires AddressRecordAllow{
         
         assert!(Config::is_admin_by_signer<ROOT>(sender), 10012);
-        let allow = borrow_global_mut<AddressRecordAllow<ROOT>>(@SNSadmin);
+        let allow = borrow_global_mut<AddressRecordAllow<ROOT>>(Config::creater());
         let list = &mut allow.list;
 
         if(Table::contains(list, *name)){
@@ -162,7 +177,7 @@ module SNSadmin::AddressResolver{
 
     public fun remove_all_allow_address_record<ROOT: store>(sender:&signer)acquires AddressRecordAllow{
         assert!(Config::is_admin_by_signer<ROOT>(sender), 10012);
-        let allow = borrow_global_mut<AddressRecordAllow<ROOT>>(@SNSadmin);
+        let allow = borrow_global_mut<AddressRecordAllow<ROOT>>(Config::creater());
         let allow_list = &mut allow.list;
 
         let j = 0;
@@ -188,7 +203,7 @@ module SNSadmin::AddressResolver{
 
     //Read 
     public fun get_address_record<ROOT: store>(hash: &vector<u8>, addr_name:&vector<u8>):Option::Option<vector<u8>> acquires Resolver{
-        let resolver = & borrow_global<Resolver<ROOT>>(@SNSadmin).list;
+        let resolver = & borrow_global<Resolver<ROOT>>(Config::creater()).list;
         if(Table::contains(resolver, *hash)){
             let address_record = Table::borrow(resolver, *hash);
             if(Table::contains(&address_record.addresses, *addr_name)){
@@ -199,5 +214,10 @@ module SNSadmin::AddressResolver{
         }else{
             Option::none<vector<u8>>()
         }
+    }
+
+    public fun get_all_allow_address<ROOT:store>():vector<vector<u8>> acquires AddressRecordAllow{
+        let allow = borrow_global_mut<AddressRecordAllow<ROOT>>(Config::creater());
+        allow.all
     }
 }

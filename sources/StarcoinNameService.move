@@ -135,7 +135,17 @@ module SNSadmin::StarcoinNameService{
         Resolver::change<ROOT>(&name_hash, addr);
     }
 
+    public fun get_identifier_info<ROOT: store>(addr: address):NFT::NFTInfo<SNSMetaData<ROOT>>{
+        let op_info = IdentifierNFT::get_nft_info<SNSMetaData<ROOT>,SNSBody>(addr);
+        assert!(Option::is_some(&op_info),102123);
+        Option::destroy_some(op_info)
+    }
 
+    public fun get_nft_info<ROOT: store>(addr: address, id: u64):NFT::NFTInfo<SNSMetaData<ROOT>>{
+        let op_info = NFTGallery::get_nft_info_by_id<SNSMetaData<ROOT>,SNSBody>(addr, id);
+        assert!(Option::is_some(&op_info),102123);
+        Option::destroy_some(op_info)
+    }
     // public fun add_Record_address(sender:&signer,name:&vector<u8>,addr:&vector<u8>)acquires RootList{
     //     let account = Signer::address_of(sender);
     //     let op_info = IdentifierNFT::get_nft_info<SNSMetaData,SNSBody>(account);
