@@ -1,0 +1,3 @@
+module SNSadmin::Price{
+    
+}

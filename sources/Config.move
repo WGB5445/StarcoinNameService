@@ -94,13 +94,13 @@ module SNSadmin::Config{
     }
 
 
-    #[test(sender = @SNSadmin)]
-    fun test_Config (sender: signer) acquires RootConfig, RootMap{
-        use SNSadmin::Root::STC;
-        init(&sender);
-        modify_RootMap<STC>(&sender, &b"stc", @0x1);
-        assert!(get_root<STC>() == b"stc",1);
-        assert!(get_admin_by_root<STC>() == @0x1, 2);
-    }
+    // #[test(sender = @SNSadmin)]
+    // fun test_Config (sender: signer) acquires RootConfig, RootMap{
+    //     use SNSadmin::Root::STC;
+    //     init(&sender);
+    //     modify_RootMap<STC>(&sender, &b"stc", @0x1);
+    //     assert!(get_root<STC>() == b"stc",1);
+    //     assert!(get_admin_by_root<STC>() == @0x1, 2);
+    // }
 
 }

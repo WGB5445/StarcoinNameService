@@ -68,4 +68,7 @@ module SNSadmin::Registrar{
         obj.id
     }
 
+    //TODO: admin
+     
+
 }
