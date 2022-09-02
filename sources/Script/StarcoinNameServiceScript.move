@@ -40,6 +40,14 @@ module SNSadmin::StarcoinNameServiceScript{
     }
 
     public (script) fun unuse_domain<ROOT: store>(sender:signer){
+        let account = Signer::address_of(&sender);
+        let info = SNS::get_identifier_info<ROOT>(account);
+        let (id,_,_,nft_meta) = NFT::unpack_info(info);
+        let name_hash = DomainName::get_name_hash_2(&NameServiceNFT::get_parent(&nft_meta), &NameServiceNFT::get_domain_name(&nft_meta));
+        let registryDetails = Option::destroy_some(Registrar::get_details_by_hash<ROOT>(&name_hash));
+        if(id == Registrar::get_id(&registryDetails)){
+            AddressResolver::remove_record<ROOT>(&name_hash);
+        };
         SNS::unuse_domain<ROOT>(&sender);
     }
 
@@ -61,6 +69,25 @@ module SNSadmin::StarcoinNameServiceScript{
         AddressResolver::change_address<ROOT>(&name_hash, &name, &addr);
     }
 
+    public (script)fun change_Record_address<ROOT:store>(sender:signer,name:vector<u8>,addr:vector<u8>){
+        let account = Signer::address_of(&sender);
+        let info = SNS::get_identifier_info<ROOT>(account);
+        let (id,_,_,nft_meta) = NFT::unpack_info(info);
+        let name_hash = DomainName::get_name_hash_2(&NameServiceNFT::get_parent(&nft_meta), &NameServiceNFT::get_domain_name(&nft_meta));
+        let registryDetails = Option::destroy_some(Registrar::get_details_by_hash<ROOT>(&name_hash));
+        assert!(id == Registrar::get_id(&registryDetails), 10124);
+        AddressResolver::change_address<ROOT>(&name_hash, &name, &addr);
+    }
+
+    public (script)fun delete_Record_address<ROOT:store>(sender:signer,name:vector<u8>){
+        let account = Signer::address_of(&sender);
+        let info = SNS::get_identifier_info<ROOT>(account);
+        let (id,_,_,nft_meta) = NFT::unpack_info(info);
+        let name_hash = DomainName::get_name_hash_2(&NameServiceNFT::get_parent(&nft_meta), &NameServiceNFT::get_domain_name(&nft_meta));
+        let registryDetails = Option::destroy_some(Registrar::get_details_by_hash<ROOT>(&name_hash));
+        assert!(id == Registrar::get_id(&registryDetails), 10124);
+        AddressResolver::remove_address<ROOT>(&name_hash, &name);
+    }
     // public (script)fun change_NFTGallery_Record_address(sender:signer,id:u64,name:vector<u8>,addr:vector<u8>){
     //     SNS::change_Record_address(&sender,Option::some(id),&name,&addr);
     // }

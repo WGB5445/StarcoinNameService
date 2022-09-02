@@ -218,6 +218,6 @@ module SNSadmin::AddressResolver{
 
     public fun get_all_allow_address<ROOT:store>():vector<vector<u8>> acquires AddressRecordAllow{
         let allow = borrow_global_mut<AddressRecordAllow<ROOT>>(Config::creater());
-        allow.all
+        *&allow.all
     }
 }

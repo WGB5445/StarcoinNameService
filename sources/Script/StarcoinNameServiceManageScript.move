@@ -4,12 +4,12 @@ module SNSadmin::StarcoinNameServiceManageScript{
     use SNSadmin::AddressResolver;
     // Config
 
-    public (script) fun modify_RootMap<ROOT:store>(sender:signer, root: &vector<u8>, admin:address){
-        Config::modify_RootMap<ROOT>(&sender, root, admin)
+    public (script) fun modify_RootMap<ROOT:store>(sender:signer, root: vector<u8>, admin:address){
+        Config::modify_RootMap<ROOT>(&sender, &root, admin)
     } 
 
-    public (script) fun delete_RootMap<ROOT:store>(sender:signer, root: &vector<u8>){
-        Config::delete_RootMap<ROOT>(&sender, root);
+    public (script) fun delete_RootMap<ROOT:store>(sender:signer, root: vector<u8>){
+        Config::delete_RootMap<ROOT>(&sender, &root);
     }
 
     public fun is_admin_by_address<ROOT:store>(addr:address):bool{
@@ -33,6 +33,12 @@ module SNSadmin::StarcoinNameServiceManageScript{
         AddressResolver::remove_allow_address_record<ROOT>(&sender, &name, len);
     }
 
+    public (script) fun remove_all_allow_address_record_len<ROOT: store>(sender:signer, name:vector<u8>){
+        AddressResolver::remove_all_allow_address_record_len<ROOT>(&sender, &name);
+    }
 
-
+    public (script) fun remove_all_allow_address_record<ROOT: store>(sender:signer){
+        AddressResolver::remove_all_allow_address_record<ROOT>(&sender);
+    }
+    
 }
