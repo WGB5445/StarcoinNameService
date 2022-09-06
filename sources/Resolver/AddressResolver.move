@@ -64,6 +64,9 @@ module SNSadmin::AddressResolver{
                 addresses : Table::new<vector<u8>, vector<u8>>(),
                 all       : Vector::empty<vector<u8>>()
             });
+            let address_record = Table::borrow_mut(resolver, *hash);
+            Table::add(&mut address_record.addresses, *addr_name, *addr);
+            Vector::push_back(&mut address_record.all, *addr_name);
             Option::none<vector<u8>>()
         }
     }

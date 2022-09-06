@@ -2,6 +2,7 @@ module SNSadmin::StarcoinNameServiceManageScript{
 
     use SNSadmin::Config as Config;
     use SNSadmin::AddressResolver;
+    use SNSadmin::ContentResolver;
     // Config
 
     public (script) fun modify_RootMap<ROOT:store>(sender:signer, root: vector<u8>, admin:address){
@@ -40,5 +41,13 @@ module SNSadmin::StarcoinNameServiceManageScript{
     public (script) fun remove_all_allow_address_record<ROOT: store>(sender:signer){
         AddressResolver::remove_all_allow_address_record<ROOT>(&sender);
     }
-    
+
+    //ContentResolver
+    public (script) fun add_allow_content<ROOT: store>(sender:signer, content_name:vector<u8>, len:u64){
+        ContentResolver::add_allow_content<ROOT>(&sender, &content_name, len);
+    }
+
+    public (script) fun remove_allow_content<ROOT: store>(sender:signer, content_name:vector<u8>){
+        ContentResolver::remove_allow_content<ROOT>(&sender, &content_name);
+    }
 }
